@@ -21,15 +21,14 @@
         path: /etc/mysql/mariadb.conf.d/50-server.cnf  # Adjust this path if using MySQL
         regexp: '^bind-address'
         line: 'bind-address = 0.0.0.0'
-        notify: Restart MariaDB
+        create: yes  # Ensure the file exists
+
+    - name: Restart MariaDB to apply new configuration
+      ansible.builtin.systemd:
+        name: mariadb
+        state: restarted
 
     - name: Allow traffic on port 3306 through the firewall
       ansible.builtin.ufw:
         rule: allow
         name: '3306/tcp'
-
-  handlers:
-    - name: Restart MariaDB
-      ansible.builtin.systemd:
-        name: mariadb
-        state: restarted
