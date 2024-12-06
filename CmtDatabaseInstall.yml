@@ -3,29 +3,22 @@
   hosts: web_servers
   become: true
   tasks:
-    - name: Ensure UFW is installed and enabled
-      ansible.builtin.apt:
-        name: ufw
+    - name: Ensure iptables is installed
+      ansible.builtin.yum:
+        name: iptables
         state: present
-        update_cache: yes
 
-    - name: Ensure UFW is enabled
+    - name: Allow traffic on port 22 (SSH) through iptables
       ansible.builtin.command:
-        cmd: ufw enable
+        cmd: iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
-    - name: Allow traffic on port 22 (SSH) through UFW
-      ansible.builtin.ufw:
-        rule: allow
-        port: '22'
-        proto: tcp
-        state: enabled
+    - name: Allow traffic on port 3306 (MariaDB) through iptables
+      ansible.builtin.command:
+        cmd: iptables -A INPUT -p tcp --dport 3306 -j ACCEPT
 
-    - name: Allow traffic on port 3306 (MariaDB) through UFW
-      ansible.builtin.ufw:
-        rule: allow
-        port: '3306'
-        proto: tcp
-        state: enabled
+    - name: Save iptables rules
+      ansible.builtin.command:
+        cmd: service iptables save
 
     - name: Ensure MariaDB server is installed
       ansible.builtin.apt:
