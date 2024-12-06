@@ -1,6 +1,6 @@
 ---
 - name: Install and configure MariaDB
-  hosts: my_servers  # Ensure this matches the group in your inventory
+  hosts: web_servers  # Ensure this matches the group in your inventory
   become: true
   tasks:
     - name: Ensure UFW is enabled
