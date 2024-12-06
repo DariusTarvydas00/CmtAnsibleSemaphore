@@ -6,7 +6,7 @@
     ansible_python_interpreter: /usr/bin/python3  # Ensure we use Python 3
 
   tasks:
-    
+
     # Step 1: Update apt cache
     - name: Update apt cache
       ansible.builtin.apt:
@@ -25,17 +25,23 @@
         state: started
         enabled: true
 
-    # Step 4: Pull MariaDB Docker image
+    # Step 4: Check if the MariaDB container already exists and remove it if necessary
+    - name: Remove existing MariaDB container if it exists
+      ansible.builtin.command:
+        cmd: docker rm -f mariadb_container
+        ignore_errors: yes
+
+    # Step 5: Pull MariaDB Docker image
     - name: Pull MariaDB Docker image
       ansible.builtin.command:
         cmd: docker pull mariadb:latest
 
-    # Step 5: Run MariaDB container with port binding
+    # Step 6: Run MariaDB container with port binding
     - name: Run MariaDB in Docker container
       ansible.builtin.command:
         cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ lookup('env', 'mysql_root_password') }} -p 3306:3306 mariadb:latest
 
-    # Step 6: Install firewalld (if needed) and start the service
+    # Step 7: Install firewalld (if needed) and start the service
     - name: Install firewalld (Ubuntu/Debian)
       ansible.builtin.apt:
         name: firewalld
@@ -47,35 +53,35 @@
         state: started
         enabled: true
 
-    # Step 7: Allow SSH traffic through the firewall
+    # Step 8: Allow SSH traffic through the firewall
     - name: Allow SSH traffic through firewalld
       ansible.builtin.command:
         cmd: firewall-cmd --zone=public --add-port=22/tcp --permanent
 
-    # Step 8: Allow MySQL traffic through the firewall
+    # Step 9: Allow MySQL traffic through the firewall
     - name: Allow MySQL traffic through firewalld
       ansible.builtin.command:
         cmd: firewall-cmd --zone=public --add-port=3306/tcp --permanent
 
-    # Step 9: Reload firewalld to apply changes
+    # Step 10: Reload firewalld to apply changes
     - name: Reload firewalld to apply changes
       ansible.builtin.command:
         cmd: firewall-cmd --reload
 
-    # Step 10: Fetch MySQL root username and password from Semaphore Environment Variables
+    # Step 11: Fetch MySQL root username and password from Semaphore Environment Variables
     - name: Set MySQL root username and password from environment variables
       ansible.builtin.set_fact:
         mysql_root_user: "{{ lookup('env', 'mysql_root_username') }}"  # Get MySQL root username from environment variable
         mysql_root_password: "{{ lookup('env', 'mysql_root_password') }}"  # Get MySQL root password from environment variable
 
-    # Step 11: Create MySQL user inside the Docker container
+    # Step 12: Create MySQL user inside the Docker container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
 
-    # Step 12: Verify MySQL user creation (Optional)
+    # Step 13: Verify MySQL user creation (Optional)
     - name: Verify MySQL user creation inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
