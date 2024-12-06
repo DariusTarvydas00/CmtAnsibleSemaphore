@@ -4,11 +4,14 @@
   become: true
   tasks:
     - name: Ensure MySQL is installed
-      ansible.builtin.yum:
+      ansible.builtin.apt:
         name: mysql-server
         state: present
+        update_cache: yes  # Update the apt cache
+        force: yes  # Ensure the package is installed even if it's already there
+
     - name: Ensure MySQL service is running
       ansible.builtin.service:
-        name: mysqld
+        name: mysql
         state: started
         enabled: true
