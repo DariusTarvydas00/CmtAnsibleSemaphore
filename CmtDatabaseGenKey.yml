@@ -2,8 +2,8 @@
 - name: Generate SSH RSA key pair and assign it to a new user
   hosts: localhost
   vars:
-    target_user: "newuser"  # The username you want to create
-    target_server: "your_target_server"  # The target server to manage
+    target_user: "cmtuser"  # The username you want to create
+    target_server: "cmt_database"  # The target server to manage
 
   tasks:
     - name: Generate SSH RSA key pair
@@ -16,7 +16,7 @@
 
     - name: Store the private key in Semaphore Key Store
       semaphore_key_store:
-        name: "my_ssh_private_key"
+        name: "cmt_database_ssh_key"
         value: "{{ lookup('file', '/tmp/my_rsa_key') }}"
         type: secret
 
