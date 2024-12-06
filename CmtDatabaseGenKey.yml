@@ -1,6 +1,10 @@
 ---
-- name: Generate and store SSH RSA key pair
+- name: Generate SSH RSA key pair and assign it to a new user
   hosts: localhost
+  vars:
+    target_user: "newuser"  # The username you want to create
+    target_server: "your_target_server"  # The target server to manage
+
   tasks:
     - name: Generate SSH RSA key pair
       openssh_keypair:
@@ -16,7 +20,15 @@
         value: "{{ lookup('file', '/tmp/my_rsa_key') }}"
         type: secret
 
-    - name: Copy the public key to the target server
+    - name: Create a new user on the target server
+      user:
+        name: "{{ target_user }}"
+        state: present
+        create_home: yes  # Create home directory for the user
+        shell: /bin/bash
+      delegate_to: "{{ target_server }}"
+
+    - name: Add SSH public key to the newly created user
       authorized_key:
         user: "{{ target_user }}"
         key: "{{ lookup('file', '/tmp/my_rsa_key.pub') }}"
