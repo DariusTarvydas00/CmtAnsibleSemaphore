@@ -1,0 +1,24 @@
+---
+- name: Generate and store SSH RSA key pair
+  hosts: localhost
+  tasks:
+    - name: Generate SSH RSA key pair
+      openssh_keypair:
+        path: "/tmp/my_rsa_key"
+        type: rsa
+        size: 2048
+        force: yes
+      register: ssh_keypair
+
+    - name: Store the private key in Semaphore Key Store
+      semaphore_key_store:
+        name: "my_ssh_private_key"
+        value: "{{ lookup('file', '/tmp/my_rsa_key') }}"
+        type: secret
+
+    - name: Copy the public key to the target server
+      authorized_key:
+        user: "{{ target_user }}"
+        key: "{{ lookup('file', '/tmp/my_rsa_key.pub') }}"
+        state: present
+      delegate_to: "{{ target_server }}"
