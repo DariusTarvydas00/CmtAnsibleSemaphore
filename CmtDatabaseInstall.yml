@@ -81,6 +81,15 @@
         mysql_root_user: "{{ lookup('env', 'mysql_root_username') }}"  # Get MySQL root username from environment variable
         mysql_root_password: "{{ lookup('env', 'mysql_root_password') }}"  # Get MySQL root password from environment variable
 
+    - name: Wait for MariaDB container to be in running state
+      ansible.builtin.docker_container:
+        name: mariadb_container
+        state: started
+      register: container_status
+      until: container_status.state == 'running'
+      retries: 5
+      delay: 10
+
     # Step 12: Create MySQL user inside the Docker container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
