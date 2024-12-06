@@ -3,12 +3,13 @@
   hosts: web_servers  # Ensure this matches the group in your inventory
   become: true
   tasks:
-    
+
     # Step 1: Install Docker on CentOS
-    - name: Install Docker on CentOS
+    - name: Install Docker on CentOS (use dnf if on CentOS 8+)
       ansible.builtin.yum:
         name: docker
         state: present
+        use_backend: dnf  # Explicitly use dnf for CentOS 8+ (if yum is not automatically detected)
 
     - name: Start and enable Docker service
       ansible.builtin.systemd:
@@ -31,6 +32,7 @@
       ansible.builtin.yum:
         name: firewalld
         state: present
+        use_backend: dnf  # Explicitly use dnf for CentOS 8+
 
     - name: Start and enable firewalld
       ansible.builtin.systemd:
