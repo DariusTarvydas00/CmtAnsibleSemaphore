@@ -1,18 +1,25 @@
 ---
 - name: Install and configure MariaDB
-  hosts: web_servers  # Ensure this matches the group in your inventory
+  hosts: web_servers
   become: true
   tasks:
-    - name: Ensure UFW is enabled
-      ansible.builtin.command:
-        cmd: ufw enable
+    - name: Ensure firewalld is enabled
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
 
-    - name: Allow traffic on port 22 (SSH) through the firewall
-      ansible.builtin.ufw:
-        rule: allow
-        port: '22'
-        proto: tcp
-        state: enabled
+    - name: Allow traffic on port 22 (SSH) through the firewall (firewalld)
+      ansible.builtin.command:
+        cmd: firewall-cmd --zone=public --add-port=22/tcp --permanent
+
+    - name: Allow traffic on port 3306 (MariaDB) through the firewall (firewalld)
+      ansible.builtin.command:
+        cmd: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+
+    - name: Reload firewalld to apply changes
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload
 
     - name: Ensure MariaDB server is installed
       ansible.builtin.apt:
@@ -29,19 +36,12 @@
 
     - name: Configure MariaDB to listen on all IP addresses
       ansible.builtin.lineinfile:
-        path: /etc/mysql/mariadb.conf.d/50-server.cnf  # Adjust this path if using MySQL
+        path: /etc/mysql/mariadb.conf.d/50-server.cnf
         regexp: '^bind-address'
         line: 'bind-address = 0.0.0.0'
-        create: yes  # Ensure the file exists
+        create: yes
 
     - name: Restart MariaDB to apply new configuration
       ansible.builtin.systemd:
         name: mariadb
         state: restarted
-
-    - name: Allow traffic on port 3306 through the firewall (UFW)
-      ansible.builtin.ufw:
-        rule: allow
-        port: '3306'
-        proto: tcp
-        state: enabled
