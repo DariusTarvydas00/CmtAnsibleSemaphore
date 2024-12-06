@@ -3,23 +3,29 @@
   hosts: web_servers
   become: true
   tasks:
-    - name: Ensure firewalld is enabled
-      ansible.builtin.service:
-        name: firewalld
-        state: started
-        enabled: true
+    - name: Ensure UFW is installed and enabled
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+        update_cache: yes
 
-    - name: Allow traffic on port 22 (SSH) through the firewall (firewalld)
+    - name: Ensure UFW is enabled
       ansible.builtin.command:
-        cmd: firewall-cmd --zone=public --add-port=22/tcp --permanent
+        cmd: ufw enable
 
-    - name: Allow traffic on port 3306 (MariaDB) through the firewall (firewalld)
-      ansible.builtin.command:
-        cmd: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+    - name: Allow traffic on port 22 (SSH) through UFW
+      ansible.builtin.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+        state: enabled
 
-    - name: Reload firewalld to apply changes
-      ansible.builtin.command:
-        cmd: firewall-cmd --reload
+    - name: Allow traffic on port 3306 (MariaDB) through UFW
+      ansible.builtin.ufw:
+        rule: allow
+        port: '3306'
+        proto: tcp
+        state: enabled
 
     - name: Ensure MariaDB server is installed
       ansible.builtin.apt:
