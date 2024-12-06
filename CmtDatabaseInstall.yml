@@ -6,7 +6,6 @@
     ansible_python_interpreter: /usr/bin/python3  # Ensure we use Python 3
 
   tasks:
-
     # Step 1: Update apt cache
     - name: Update apt cache
       ansible.builtin.apt:
@@ -45,59 +44,27 @@
         state: started
         restart_policy: always
         env:
-          MYSQL_ROOT_PASSWORD: "{{ lookup('env', 'mysql_root_password') }}"  # Fetch from Semaphore environment
-        network_mode: host  # Use host networking
+          MYSQL_ROOT_PASSWORD: "{{ lookup('env', 'mysql_root_password') }}"
+        networks:
+          - name: host  # Optional: Ensure correct networking mode is used
 
-    # Step 7: Install firewalld (if needed) and start the service
-    - name: Install firewalld (Ubuntu/Debian)
-      ansible.builtin.apt:
-        name: firewalld
-        state: present
-
-    - name: Start and enable firewalld
-      ansible.builtin.systemd:
-        name: firewalld
-        state: started
-        enabled: true
-
-    # Step 8: Allow SSH traffic through the firewall
-    - name: Allow SSH traffic through firewalld
-      ansible.builtin.command:
-        cmd: firewall-cmd --zone=public --add-port=22/tcp --permanent
-
-    # Step 9: Allow MySQL traffic through the firewall
-    - name: Allow MySQL traffic through firewalld
-      ansible.builtin.command:
-        cmd: firewall-cmd --zone=public --add-port=3306/tcp --permanent
-
-    # Step 10: Reload firewalld to apply changes
-    - name: Reload firewalld to apply changes
-      ansible.builtin.command:
-        cmd: firewall-cmd --reload
-
-    # Step 11: Fetch MySQL root username and password from Semaphore Environment Variables
-    - name: Set MySQL root username and password from environment variables
-      ansible.builtin.set_fact:
-        mysql_root_user: "{{ lookup('env', 'mysql_root_username') }}"  # Get MySQL root username from environment variable
-        mysql_root_password: "{{ lookup('env', 'mysql_root_password') }}"  # Get MySQL root password from environment variable
-
-    - name: Wait for MariaDB container to be in running state
-      ansible.builtin.docker_container:
-        name: mariadb_container
-        state: started
-      register: container_status
-      until: container_status.state == 'running'
+    # Step 7: Wait for the container to be in running state
+    - name: Check if MariaDB container is running
+      ansible.builtin.command: docker ps -q -f name=mariadb_container
+      register: container_running
       retries: 5
       delay: 10
+      until: container_running.stdout != ''
 
-    # Step 12: Create MySQL user inside the Docker container
+    # Step 8: Create MySQL user inside the container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
-        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
-        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
-        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+        docker exec -i mariadb_container mariadb -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
+        docker exec -i mariadb_container mariadb -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
+        docker exec -i mariadb_container mariadb -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+      when: container_running.stdout != ''
 
-    # Step 13: Verify MySQL user creation (Optional)
+    # Step 9: Verify MySQL user creation (Optional)
     - name: Verify MySQL user creation inside the container
       ansible.builtin.shell: |
-        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
+        docker exec -i mariadb_container mariadb -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
