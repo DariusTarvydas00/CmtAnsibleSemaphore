@@ -28,14 +28,9 @@
         name: mariadb
         state: restarted
 
-    - name: Install UFW (if not installed)
-      ansible.builtin.apt:
-        name: ufw
-        state: present
-        update_cache: yes
-
     - name: Allow traffic on port 3306 through the firewall (UFW)
       ansible.builtin.ufw:
         rule: allow
-        name: '3306/tcp'
+        port: '3306'
+        proto: tcp
         state: enabled
