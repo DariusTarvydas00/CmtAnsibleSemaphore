@@ -3,6 +3,17 @@
   hosts: my_servers  # Ensure this matches the group in your inventory
   become: true
   tasks:
+    - name: Ensure UFW is enabled
+      ansible.builtin.command:
+        cmd: ufw enable
+
+    - name: Allow traffic on port 22 (SSH) through the firewall
+      ansible.builtin.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+        state: enabled
+
     - name: Ensure MariaDB server is installed
       ansible.builtin.apt:
         name: mariadb-server
