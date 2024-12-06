@@ -25,21 +25,29 @@
         state: started
         enabled: true
 
-    # Step 4: Check if the MariaDB container already exists and remove it if necessary
-    - name: Remove existing MariaDB container if it exists
-      ansible.builtin.command:
-        cmd: docker rm -f mariadb_container
-        ignore_errors: yes
-
-    # Step 5: Pull MariaDB Docker image
+    # Step 4: Pull MariaDB Docker image
     - name: Pull MariaDB Docker image
       ansible.builtin.command:
         cmd: docker pull mariadb:latest
 
+    # Step 5: Remove existing MariaDB container if it exists
+    - name: Remove existing MariaDB container if it exists
+      ansible.builtin.docker_container:
+        name: mariadb_container
+        state: absent
+      ignore_errors: yes  # Continue execution if the container is not found
+
     # Step 6: Run MariaDB container with port binding
     - name: Run MariaDB in Docker container
-      ansible.builtin.command:
-        cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ lookup('env', 'mysql_root_password') }} -p 3306:3306 mariadb:latest
+      ansible.builtin.docker_container:
+        name: mariadb_container
+        image: mariadb:latest
+        state: started
+        restart_policy: always
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ lookup('env', 'mysql_root_password') }}"
+        published_ports:
+          - "3306:3306"
 
     # Step 7: Install firewalld (if needed) and start the service
     - name: Install firewalld (Ubuntu/Debian)
