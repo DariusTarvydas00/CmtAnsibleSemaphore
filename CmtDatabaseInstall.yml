@@ -4,9 +4,9 @@
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3  # Ensure we use Python 3
-  
-  tasks:
 
+  tasks:
+    
     # Step 1: Update apt cache
     - name: Update apt cache
       ansible.builtin.apt:
@@ -33,7 +33,7 @@
     # Step 5: Run MariaDB container with port binding
     - name: Run MariaDB in Docker container
       ansible.builtin.command:
-        cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ mysql_root_password }} -p 3306:3306 mariadb:latest
+        cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ lookup('env', 'mysql_root_password') }} -p 3306:3306 mariadb:latest
 
     # Step 6: Install firewalld (if needed) and start the service
     - name: Install firewalld (Ubuntu/Debian)
@@ -62,24 +62,20 @@
       ansible.builtin.command:
         cmd: firewall-cmd --reload
 
-    # Step10: Fetch MySQL root password from Semaphore Key Store
-    - name: Get MySQL root password from Semaphore Key Store
+    # Step 10: Fetch MySQL root username and password from Semaphore Environment Variables
+    - name: Set MySQL root username and password from environment variables
       ansible.builtin.set_fact:
-        mysql_root_password: "{{ lookup('semaphore', 'mysql_root_password') }}"  # Ensure 'mysql_root_password' is the correct key in the Key Store
+        mysql_root_user: "{{ lookup('env', 'mysql_root_username') }}"  # Get MySQL root username from environment variable
+        mysql_root_password: "{{ lookup('env', 'mysql_root_password') }}"  # Get MySQL root password from environment variable
 
-    # Step 11: Get MySQL password from Semaphore UI Key Store
-    - name: Get MySQL password from Semaphore UI Key Store
-      ansible.builtin.set_fact:
-        mysql_password: "{{ lookup('semaphore', 'mysql_password') }}"  # Replace 'mysql_password' with the actual key in your key store
-
-    # Step 12: Create MySQL user inside the Docker container
+    # Step 11: Create MySQL user inside the Docker container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
 
-    # Step 13: Verify MySQL user creation (Optional)
+    # Step 12: Verify MySQL user creation (Optional)
     - name: Verify MySQL user creation inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
