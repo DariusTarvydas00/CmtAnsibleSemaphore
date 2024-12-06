@@ -1,6 +1,6 @@
 ---
-- name: Install and start MySQL
-  hosts: my_servers  # Make sure this matches the group in your inventory
+- name: Install and configure MariaDB
+  hosts: my_servers  # Ensure this matches the group in your inventory
   become: true
   tasks:
     - name: Ensure MariaDB server is installed
@@ -15,3 +15,21 @@
         name: mariadb
         state: started
         enabled: true
+
+    - name: Configure MariaDB to listen on all IP addresses
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/mariadb.conf.d/50-server.cnf  # Adjust this path if using MySQL
+        regexp: '^bind-address'
+        line: 'bind-address = 0.0.0.0'
+        notify: Restart MariaDB
+
+    - name: Allow traffic on port 3306 through the firewall
+      ansible.builtin.ufw:
+        rule: allow
+        name: '3306/tcp'
+
+  handlers:
+    - name: Restart MariaDB
+      ansible.builtin.systemd:
+        name: mariadb
+        state: restarted
