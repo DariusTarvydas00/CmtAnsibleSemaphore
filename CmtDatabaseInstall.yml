@@ -62,10 +62,10 @@
       ansible.builtin.command:
         cmd: firewall-cmd --reload
 
-    # Step 10: Get MySQL username from Semaphore UI Key Store
-    - name: Get MySQL username from Semaphore UI Key Store
+    # Step10: Fetch MySQL root password from Semaphore Key Store
+    - name: Get MySQL root password from Semaphore Key Store
       ansible.builtin.set_fact:
-        mysql_user: "{{ lookup('semaphore', 'mysql_user') }}"  # Replace 'mysql_user' with the actual key in your key store
+        mysql_root_password: "{{ lookup('semaphore', 'mysql_root_password') }}"  # Ensure 'mysql_root_password' is the correct key in the Key Store
 
     # Step 11: Get MySQL password from Semaphore UI Key Store
     - name: Get MySQL password from Semaphore UI Key Store
