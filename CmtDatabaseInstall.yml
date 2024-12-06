@@ -4,7 +4,14 @@
   become: true
   tasks:
 
-    # Step 1: Install Docker on CentOS
+    # Step 1: Ensure python3-dnf is installed (if missing)
+    - name: Ensure python3-dnf is installed
+      ansible.builtin.yum:
+        name: python3-dnf
+        state: present
+        use_backend: dnf  # Explicitly use dnf for CentOS 8+ (if yum is not automatically detected)
+
+    # Step 2: Install Docker on CentOS
     - name: Install Docker on CentOS (use dnf if on CentOS 8+)
       ansible.builtin.yum:
         name: docker
@@ -17,17 +24,17 @@
         state: started
         enabled: true
 
-    # Step 2: Pull the MariaDB Docker image
+    # Step 3: Pull the MariaDB Docker image
     - name: Pull MariaDB Docker image
       ansible.builtin.command:
         cmd: docker pull mariadb:latest
 
-    # Step 3: Run MariaDB container with port binding
+    # Step 4: Run MariaDB container with port binding
     - name: Run MariaDB in Docker container
       ansible.builtin.command:
         cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ mysql_root_password }} -p 3306:3306 mariadb:latest
 
-    # Step 4: Allow SSH traffic and MySQL traffic on CentOS firewall
+    # Step 5: Allow SSH traffic and MySQL traffic on CentOS firewall
     - name: Ensure firewalld is installed and running
       ansible.builtin.yum:
         name: firewalld
@@ -52,7 +59,7 @@
       ansible.builtin.command:
         cmd: firewall-cmd --reload
 
-    # Step 5: Retrieve MySQL credentials from Semaphore UI Key Store
+    # Step 6: Retrieve MySQL credentials from Semaphore UI Key Store
     - name: Get MySQL username from Semaphore UI Key Store
       ansible.builtin.set_fact:
         mysql_user: "{{ lookup('semaphore', 'mysql_user') }}"  # Replace 'mysql_user' with the actual key in your key store
@@ -61,14 +68,14 @@
       ansible.builtin.set_fact:
         mysql_password: "{{ lookup('semaphore', 'mysql_password') }}"  # Replace 'mysql_password' with the actual key in your key store
 
-    # Step 6: Create MySQL user inside the Docker container
+    # Step 7: Create MySQL user inside the Docker container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
 
-    # Step 7: Verify user creation (Optional)
+    # Step 8: Verify user creation (Optional)
     - name: Verify MySQL user creation inside the container
       ansible.builtin.shell: |
         docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
