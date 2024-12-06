@@ -2,6 +2,9 @@
 - name: Install and configure MariaDB on CentOS, run in Docker and create user
   hosts: web_servers  # Ensure this matches the group in your inventory
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3  # Explicitly set Python 3 interpreter for Ansible
+  
   tasks:
 
     # Step 1: Ensure python3-dnf is installed (if missing)
