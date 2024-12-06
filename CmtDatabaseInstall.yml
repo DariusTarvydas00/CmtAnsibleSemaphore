@@ -45,11 +45,8 @@
         state: started
         restart_policy: always
         env:
-          MYSQL_ROOT_PASSWORD: "{{ lookup('env', 'mysql_root_password') }}"
-        published_ports:
-          - "3306:3306"
-        networks:
-          - name: bridge  # Optional: Ensure correct networking mode is used
+          MYSQL_ROOT_PASSWORD: "{{ lookup('env', 'mysql_root_password') }}"  # Fetch from Semaphore environment
+        network_mode: host  # Use host networking
 
     # Step 7: Install firewalld (if needed) and start the service
     - name: Install firewalld (Ubuntu/Debian)
