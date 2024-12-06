@@ -1,6 +1,6 @@
 ---
 - name: Install and start MySQL
-  hosts: mysql  # Make sure this matches the group in your inventory
+  hosts: Cabal Databse VPS  # Make sure this matches the group in your inventory
   become: true
   tasks:
     - name: Ensure MySQL is installed
