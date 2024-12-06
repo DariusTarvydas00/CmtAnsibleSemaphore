@@ -1,1 +1,16 @@
 
+---
+- name: Install and start MySQL
+  hosts: mysql
+  become: true
+  tasks:
+    - name: Ensure MySQL is installed
+      ansible.builtin.yum:
+        name: mysql-server
+        state: present
+
+    - name: Ensure MySQL service is running
+      ansible.builtin.service:
+        name: mysqld
+        state: started
+        enabled: true
