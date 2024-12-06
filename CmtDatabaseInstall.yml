@@ -1,46 +1,72 @@
 ---
-- name: Install and configure MariaDB
-  hosts: web_servers
+- name: Install and configure MariaDB on CentOS, run in Docker and create user
+  hosts: web_servers  # Ensure this matches the group in your inventory
   become: true
   tasks:
-    - name: Ensure iptables is installed
+    
+    # Step 1: Install Docker on CentOS
+    - name: Install Docker on CentOS
       ansible.builtin.yum:
-        name: iptables
+        name: docker
         state: present
 
-    - name: Allow traffic on port 22 (SSH) through iptables
-      ansible.builtin.command:
-        cmd: iptables -A INPUT -p tcp --dport 22 -j ACCEPT
-
-    - name: Allow traffic on port 3306 (MariaDB) through iptables
-      ansible.builtin.command:
-        cmd: iptables -A INPUT -p tcp --dport 3306 -j ACCEPT
-
-    - name: Save iptables rules
-      ansible.builtin.command:
-        cmd: service iptables save
-
-    - name: Ensure MariaDB server is installed
-      ansible.builtin.apt:
-        name: mariadb-server
-        state: present
-        update_cache: yes
-        force: yes
-
-    - name: Ensure MariaDB service is running
-      ansible.builtin.service:
-        name: mariadb
+    - name: Start and enable Docker service
+      ansible.builtin.systemd:
+        name: docker
         state: started
         enabled: true
 
-    - name: Configure MariaDB to listen on all IP addresses
-      ansible.builtin.lineinfile:
-        path: /etc/mysql/mariadb.conf.d/50-server.cnf
-        regexp: '^bind-address'
-        line: 'bind-address = 0.0.0.0'
-        create: yes
+    # Step 2: Pull the MariaDB Docker image
+    - name: Pull MariaDB Docker image
+      ansible.builtin.command:
+        cmd: docker pull mariadb:latest
 
-    - name: Restart MariaDB to apply new configuration
+    # Step 3: Run MariaDB container with port binding
+    - name: Run MariaDB in Docker container
+      ansible.builtin.command:
+        cmd: docker run -d --name mariadb_container -e MYSQL_ROOT_PASSWORD={{ mysql_root_password }} -p 3306:3306 mariadb:latest
+
+    # Step 4: Allow SSH traffic and MySQL traffic on CentOS firewall
+    - name: Ensure firewalld is installed and running
+      ansible.builtin.yum:
+        name: firewalld
+        state: present
+
+    - name: Start and enable firewalld
       ansible.builtin.systemd:
-        name: mariadb
-        state: restarted
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Allow SSH traffic through firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --zone=public --add-port=22/tcp --permanent
+
+    - name: Allow MySQL traffic through firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+
+    - name: Reload firewalld to apply changes
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload
+
+    # Step 5: Retrieve MySQL credentials from Semaphore UI Key Store
+    - name: Get MySQL username from Semaphore UI Key Store
+      ansible.builtin.set_fact:
+        mysql_user: "{{ lookup('semaphore', 'mysql_user') }}"  # Replace 'mysql_user' with the actual key in your key store
+
+    - name: Get MySQL password from Semaphore UI Key Store
+      ansible.builtin.set_fact:
+        mysql_password: "{{ lookup('semaphore', 'mysql_password') }}"  # Replace 'mysql_password' with the actual key in your key store
+
+    # Step 6: Create MySQL user inside the Docker container
+    - name: Create MySQL user inside the container
+      ansible.builtin.shell: |
+        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
+        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
+        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "FLUSH PRIVILEGES;"
+
+    # Step 7: Verify user creation (Optional)
+    - name: Verify MySQL user creation inside the container
+      ansible.builtin.shell: |
+        docker exec -i mariadb_container mysql -u root -p{{ mysql_root_password }} -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
