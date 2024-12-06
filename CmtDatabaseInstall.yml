@@ -3,15 +3,15 @@
   hosts: my_servers  # Make sure this matches the group in your inventory
   become: true
   tasks:
-    - name: Ensure MySQL is installed
+    - name: Ensure MariaDB server is installed
       ansible.builtin.apt:
-        name: mysql-server
+        name: mariadb-server
         state: present
-        update_cache: yes  # Update the apt cache
-        force: yes  # Ensure the package is installed even if it's already there
+        update_cache: yes
+        force: yes
 
-    - name: Ensure MySQL service is running
+    - name: Ensure MariaDB service is running
       ansible.builtin.service:
-        name: mysql
+        name: mariadb
         state: started
         enabled: true
