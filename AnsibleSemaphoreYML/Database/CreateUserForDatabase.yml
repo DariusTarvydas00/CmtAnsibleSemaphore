@@ -3,8 +3,8 @@
   hosts: all
   become: true
   vars:
-    vault_username: "{{ lookup('semaphore', 'new_user_name') }}"
-    vault_password: "{{ lookup('semaphore', 'new_user_password') }}"
+    vault_username: "{{ lookup('semaphore', 'cmt_user_name') }}"
+    vault_password: "{{ lookup('semaphore', 'cmt_user_password') }}"
 
   tasks:
     - name: Fetch username from environment variable or defined input
