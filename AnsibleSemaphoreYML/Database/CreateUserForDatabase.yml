@@ -3,7 +3,7 @@
   hosts: all
   become: true
   vars:
-    vault_password_secret: "{{ lookup('cmt_usr', 'password') }}"
+    vault_password_secret: "{{ lookup('semaphore', 'cmt_usr') }}"
 
   tasks:
 
