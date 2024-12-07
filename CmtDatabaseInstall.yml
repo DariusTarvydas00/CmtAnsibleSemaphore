@@ -48,7 +48,24 @@
         networks:
           - name: host  # Optional: Ensure correct networking mode is used
 
-    # Step 7: Wait for MariaDB to accept connections
+    # Step 7: Check if the container is running
+    - name: Check MariaDB container status
+      ansible.builtin.command:
+        cmd: docker ps -f name=mariadb_container --format '{{.Status}}'
+      register: container_status
+      failed_when: container_status.stdout != "Up"
+
+    # Step 8: Fetch container logs before waiting
+    - name: Fetch MariaDB container logs before waiting
+      ansible.builtin.shell: docker logs mariadb_container
+      register: mariadb_logs_before_wait
+      failed_when: false
+
+    - name: Show MariaDB logs before wait
+      debug:
+        var: mariadb_logs_before_wait.stdout
+
+    # Step 9: Wait for MariaDB to accept connections
     - name: Wait for MariaDB to accept connections (retries and debug)
       ansible.builtin.shell: |
         echo "Checking if MariaDB is accepting connections..."
@@ -62,24 +79,17 @@
       register: mariadb_wait
       failed_when: mariadb_wait.rc != 0
 
-    # Step 8: Check the MariaDB container logs (for troubleshooting)
-    - name: Check MariaDB container logs for startup issues
+    # Step 10: Check the MariaDB container logs (for troubleshooting)
+    - name: Check MariaDB container logs after waiting
       ansible.builtin.shell: docker logs mariadb_container
-      register: mariadb_logs
+      register: mariadb_logs_after_wait
       failed_when: false
 
-    - name: Show MariaDB logs
+    - name: Show MariaDB logs after wait
       debug:
-        var: mariadb_logs.stdout
+        var: mariadb_logs_after_wait.stdout
 
-    # Step 9: Create MySQL user inside the container
+    # Step 11: Create MySQL user inside the container
     - name: Create MySQL user inside the container
       ansible.builtin.shell: |
-        docker exec -i mariadb_container mysql -u root -p{{ lookup('env', 'mysql_root_password') }} -h 127.0.0.1 -e "CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';"
-        docker exec -i mariadb_container mysql -u root -p{{ lookup('env', 'mysql_root_password') }} -h 127.0.0.1 -e "GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_user }}'@'%';"
-        docker exec -i mariadb_container mysql -u root -p{{ lookup('env', 'mysql_root_password') }} -h 127.0.0.1 -e "FLUSH PRIVILEGES;"
-
-    # Step 10: Verify MySQL user creation (Optional)
-    - name: Verify MySQL user creation inside the container
-      ansible.builtin.shell: |
-        docker exec -i mariadb_container mysql -u root -p{{ lookup('env', 'mysql_root_password') }} -h 127.0.0.1 -e "SELECT User, Host FROM mysql.user WHERE User = '{{ mysql_user }}';"
+        docker exec -i mariadb_container mysql -
