@@ -11,13 +11,6 @@
       set_fact:
         user_password_hashed: "{{ vault_password_secret | password_hash('sha512') }}"
 
-    - name: Create user with hashed password
-      user:
-        name: "{{ user_name }}"
-        password: "{{ user_password_hashed }}"
-        shell: /bin/bash
-        create_home: yes
-
     - name: Confirm user creation
       debug:
-        msg: "User {{ user_name }} has been created successfully."
+        msg: "Print {{ user_password_hashed }} Print."
