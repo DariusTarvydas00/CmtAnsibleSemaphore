@@ -6,8 +6,8 @@
   tasks:
     - name: Create a user using secrets
       user:
-        name: "{{ lookup('env', 'USER_NAME') }}"
-        password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
+        name: "{{ lookup('env', 'cmtusername') }}"
+        password: "{{ lookup('env', 'cmtuserpassword') | password_hash('sha512') }}"
         shell: /bin/bash
         create_home: yes
 
