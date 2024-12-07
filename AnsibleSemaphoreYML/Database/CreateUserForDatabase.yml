@@ -3,13 +3,12 @@
   hosts: all
   become: true
   vars:
-    # Assuming the password is stored in Semaphore Vault as "new_user_password"
-    vault_password_secret: "{{ lookup('cmt_user_Vault', 'new_user_password') }}"
+    vault_password_secret: "{{ lookup('cmt_user_password', 'new_user_password') }}"
 
   tasks:
     - name: Fetch username from environment variable or defined input
       set_fact:
-        user_name: "{{ new_user_name }}"
+        user_name: "{{ lookup('cmt_user_name', 'new_user_name') }}"
 
     - name: Fetch password from vault and hash it
       set_fact:
