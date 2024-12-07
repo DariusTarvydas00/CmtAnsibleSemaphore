@@ -9,4 +9,4 @@
         msg: "The value of aaa is: {{ aaa }}"
     - name: Print the sss variable
       debug:
-        msg: "The value of sss is: {{ sss }}"
+        msg: "The value of sss is: {{ env.sss }}"
