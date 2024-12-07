@@ -1,29 +1,14 @@
-# Simple Test YAML File
+---
+- name: Update and Upgrade Packages
+  hosts: all
+  become: true
 
-name: Test Configuration
-version: 1.0
-enabled: true
+  tasks:
+    - name: Update the package list
+      apt:
+        update_cache: yes
 
-settings:
-  - feature: logging
-    enabled: true
-    level: info
-  - feature: analytics
-    enabled: false
-    level: debug
-
-items:
-  - id: 1
-    name: Item A
-    description: "This is item A."
-  - id: 2
-    name: Item B
-    description: "This is item B."
-
-metadata:
-  created_by: "Tester"
-  created_at: "2024-12-07T10:00:00Z"
-  tags:
-    - test
-    - yaml
-    - example
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        autoremove: yes
