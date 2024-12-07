@@ -82,14 +82,15 @@
         mysql_root_user: "{{ lookup('env', 'mysql_root_username') }}"  # Get MySQL root username from environment variable
         mysql_root_password: "{{ lookup('env', 'mysql_root_password') }}"  # Get MySQL root password from environment variable
 
-    # Step 12: Wait for MariaDB to be ready to accept connections
+    # Step 12: Wait for MariaDB to be ready to accept connections (increased timeout and delay)
     - name: Wait for MariaDB to accept connections
       ansible.builtin.wait_for:
         host: localhost
         port: 3306
         state: started
-        delay: 10
-        timeout: 60
+        delay: 30  # 30 seconds delay before starting checks
+        timeout: 120  # Timeout after 120 seconds of checking
+        msg: "MariaDB is not ready after 120 seconds"
 
     # Step 13: Check MariaDB container status
     - name: Check MariaDB container status
