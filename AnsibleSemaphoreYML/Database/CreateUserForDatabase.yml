@@ -2,7 +2,7 @@
 - name: Create User Using Environment Variables
   hosts: all
   become: true
-
+  
   tasks:
     - name: Fetch username from environment variable
       set_fact:
@@ -10,7 +10,7 @@
 
     - name: Fetch password from environment variable
       set_fact:
-        user_password: "{{ new_user_password }}"
+        user_password: "{{ new_user_password | password_hash('sha512') }}"
 
     - name: Create user with environment variables
       user:
@@ -22,3 +22,4 @@
     - name: Confirm user creation
       debug:
         msg: "User {{ new_user_name }} has been created successfully."
+  
