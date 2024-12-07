@@ -1,20 +1,24 @@
 ---
-- name: Create User from Ansible Semaphore Secrets
+- name: Create User Using Environment Variables
   hosts: all
   become: true
 
   tasks:
-    - name: Create a user using secrets
+    - name: Fetch username from environment variable
+      set_fact:
+        user_name: "{{ lookup('env', 'USER_NAME') }}"
+
+    - name: Fetch password from environment variable
+      set_fact:
+        user_password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
+
+    - name: Create user with environment variables
       user:
-        name: "{{ lookup('env', 'cmtusername') }}"
-        password: "{{ lookup('env', 'cmtuserpassword') | password_hash('sha512') }}"
+        name: "{{ user_name }}"
+        password: "{{ user_password }}"
         shell: /bin/bash
         create_home: yes
 
-    - name: Verify user creation
-      command: whoami
-      register: whoami_result
-
-    - name: Display the created username
+    - name: Confirm user creation
       debug:
-        msg: "Created user: {{ lookup('env', 'USER_NAME') }}"
+        msg: "User {{ user_name }} has been created successfully."
