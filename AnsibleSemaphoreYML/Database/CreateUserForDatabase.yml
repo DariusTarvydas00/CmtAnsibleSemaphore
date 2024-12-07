@@ -6,17 +6,33 @@
   tasks:
     - name: Fetch username and password from environment variables
       set_fact:
-        name: "{{ lookup('env', 'USER_NAME') }}"
-        password: "{{ lookup('env', 'USER_PASSWORD') }}"
+        user_name: "{{ lookup('env', 'USER_NAME') }}"
+        user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
 
     - name: Create user with the pre-hashed password
       user:
-        name: "{{ name }}"
-        password: "{{ password | password_hash('sha512') }}"
+        user_name: "{{ user_name }}"
+        user_password: "{{ user_password | password_hash('sha512') }}"
         shell: /bin/bash
         create_home: yes
+        state: present
+        
+    - name: Grant sudo permissions to the user
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^{{ user_name }}'
+        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+        
+    - name: Set proper ownership and permissions for home directory
+      file:
+        path: /home/{{ user_name }}
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+        state: directory
 
     - name: Confirm user creation
       debug:
-        msg: "User {{ name }} has been created successfully with a pre-hashed password."
+        msg: "User {{ user_name }} has been created successfully with a pre-hashed password."
         
