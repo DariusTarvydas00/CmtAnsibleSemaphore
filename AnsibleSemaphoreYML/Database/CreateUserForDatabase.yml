@@ -1,24 +1,25 @@
 ---
-- name: Create User Using Semaphore Vault Secrets
+- name: Print Environment Variables, Extra Vars, and Vault Secrets
   hosts: all
-  become: true
+  become: false
 
   tasks:
-    - name: Fetch username from Semaphore Vault
-      set_fact:
-        user_name: "{{ lookup('semaphore', 'USER_NAME') }}"
-
-    - name: Fetch password from Semaphore Vault
-      set_fact:
-        user_password: "{{ lookup('semaphore', 'USER_PASSWORD') | password_hash('sha512') }}"
-
-    - name: Create new user with Semaphore Vault credentials
-      user:
-        name: "{{ user_name }}"
-        password: "{{ user_password }}"
-        shell: /bin/bash
-        create_home: yes
-
-    - name: Confirm user creation
+    - name: Print all environment variables
       debug:
-        msg: "User {{ user_name }} has been created successfully."
+        msg: "Environment Variables: USER_NAME={{ lookup('env', 'USER_NAME') }} USER_PASSWORD={{ lookup('env', 'USER_PASSWORD') }}"
+
+    - name: Print all extra-vars passed from the command line or Semaphore UI
+      debug:
+        msg: "Extra Vars: user_name={{ user_name }} user_password={{ user_password }}"
+
+    - name: Print secrets from Vault
+      debug:
+        msg: "Vault Secrets: USER_NAME={{ lookup('semaphore', 'USER_NAME') }} USER_PASSWORD={{ lookup('semaphore', 'USER_PASSWORD') }}"
+
+    - name: Print all known facts for debugging purposes
+      debug:
+        var: hostvars
+
+    - name: Print all variables defined in the playbook or job
+      debug:
+        var: vars
