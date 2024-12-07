@@ -1,25 +1,29 @@
 ---
-- name: Print Environment Variables, Extra Vars, and Vault Secrets
+- name: Gather and print all environment variables, extra-vars, and vault secrets
   hosts: all
   become: false
 
   tasks:
     - name: Print all environment variables
       debug:
-        msg: "Environment Variables: USER_NAME={{ lookup('env', 'USER_NAME') }} USER_PASSWORD={{ lookup('env', 'USER_PASSWORD') }}"
+        msg: "Environment Variables: {{ lookup('env', 'USER_NAME') }} {{ lookup('env', 'USER_PASSWORD') }}"
 
-    - name: Print all extra-vars passed from the command line or Semaphore UI
+    - name: Print all extra-vars defined in this playbook or passed via Semaphore
       debug:
-        msg: "Extra Vars: user_name={{ user_name }} user_password={{ user_password }}"
+        msg: "Extra Vars: {{ vars | dict2items | selectattr('value', 'defined') | map(attribute='key') | list }}"
 
-    - name: Print secrets from Vault
+    - name: Print all vault secrets (using semaphore lookup)
       debug:
         msg: "Vault Secrets: USER_NAME={{ lookup('semaphore', 'USER_NAME') }} USER_PASSWORD={{ lookup('semaphore', 'USER_PASSWORD') }}"
 
-    - name: Print all known facts for debugging purposes
+    - name: Print all variables in the current scope (including environment, extra-vars, and defaults)
+      debug:
+        msg: "All Variables in Scope: {{ vars }}"
+
+    - name: Print all facts for debugging purposes (host-specific variables)
+      debug:
+        var: ansible_facts
+
+    - name: Print all host variables
       debug:
         var: hostvars
-
-    - name: Print all variables defined in the playbook or job
-      debug:
-        var: vars
