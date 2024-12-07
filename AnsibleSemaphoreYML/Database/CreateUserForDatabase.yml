@@ -1,18 +1,18 @@
 ---
-- name: Create User Using Vault Secrets
+- name: Create User Using Semaphore Vault Secrets
   hosts: all
   become: true
 
   tasks:
-    - name: Fetch username from Vault
+    - name: Fetch username from Semaphore Vault
       set_fact:
-        user_name: "{{ lookup('vault', 'USER_NAME') }}"
+        user_name: "{{ lookup('semaphore', 'USER_NAME') }}"
 
-    - name: Fetch password from Vault
+    - name: Fetch password from Semaphore Vault
       set_fact:
-        user_password: "{{ lookup('vault', 'USER_PASSWORD') | password_hash('sha512') }}"
+        user_password: "{{ lookup('semaphore', 'USER_PASSWORD') | password_hash('sha512') }}"
 
-    - name: Create new user with Vault credentials
+    - name: Create new user with Semaphore Vault credentials
       user:
         name: "{{ user_name }}"
         password: "{{ user_password }}"
