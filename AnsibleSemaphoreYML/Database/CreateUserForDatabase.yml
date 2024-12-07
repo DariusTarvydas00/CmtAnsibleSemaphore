@@ -1,12 +1,24 @@
 ---
-- name: Access and print aaa variable
+- name: Create User Using Environment Variables
   hosts: all
-  become: false
+  become: true
 
   tasks:
-    - name: Print the aaa variable
+    - name: Fetch username from environment variable
+      set_fact:
+        user_name: "{{ new_user_name }}"
+
+    - name: Fetch password from environment variable
+      set_fact:
+        user_password: "{{ new_user_password }}"
+
+    - name: Create user with environment variables
+      user:
+        name: "{{ new_user_name }}"
+        password: "{{ new_user_password }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Confirm user creation
       debug:
-        msg: "The value of aaa is: {{ aaa }}"
-    - name: Print the sss variable
-      debug:
-        msg: "The value of sss is: {{ env.sss }}"
+        msg: "User {{ new_user_name }} has been created successfully."
