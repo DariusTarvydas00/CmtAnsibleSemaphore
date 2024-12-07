@@ -8,7 +8,7 @@
   tasks:
     - name: Fetch username from environment variable or defined input
       set_fact:
-        user_name: "{{ cmtuser_name }}"
+        user_name: "{{ cmtuser }}"
 
     - name: Fetch password from vault and hash it
       set_fact:
