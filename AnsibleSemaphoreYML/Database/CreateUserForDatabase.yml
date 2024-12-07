@@ -4,12 +4,11 @@
   become: true
 
   tasks:
-    - name: Fetch password from vault and hash it
-      user:
+    - name: Fetch username and password from environment variables
       set_fact:
         name: "{{ lookup('env', 'USER_NAME') }}"
         password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
 
-    - name: Confirm user creation
+    - name: Confirm user creation and print username and password
       debug:
-        msg: "Print {{ name }} {{ password }}Print."
+        msg: "Username: {{ name }} and Hashed Password: {{ password }}"
