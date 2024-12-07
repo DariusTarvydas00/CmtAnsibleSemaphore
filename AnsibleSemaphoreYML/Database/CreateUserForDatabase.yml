@@ -5,7 +5,7 @@
 
   vars:
     # Retrieve user name and password from Vault
-    user_credentials: "{{ lookup('semaphore', 'cmt_user') }}"
+    user_credentials: "{{ lookup('ansible.builtin.vault', 'cmt_user.vault') }}"
 
   tasks:
     - name: Fetch username and password from vault
