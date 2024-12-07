@@ -2,15 +2,14 @@
 - name: Create User Using Secure Password from Vault
   hosts: all
   become: true
-  vars:
-    vault_password_secret: "{{ lookup('cmt_usr', 'cmt_usr') }}"
 
   tasks:
-
     - name: Fetch password from vault and hash it
+      user:
       set_fact:
-        user_password_hashed: "{{ vault_password_secret | password_hash('sha512') }}"
+        name: "{{ lookup('env', 'USER_NAME') }}"
+        password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
 
     - name: Confirm user creation
       debug:
-        msg: "Print {{ user_password_hashed }} Print."
+        msg: "Print {{ name }} {{ password }}Print."
