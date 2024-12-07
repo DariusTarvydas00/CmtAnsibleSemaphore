@@ -3,16 +3,17 @@
   hosts: all
   become: true
   vars:
-    vault_password_secret: "{{ lookup('cmtuser', 'new_user_password') }}"
+    vault_username: "{{ lookup('cmt_user_name', 'new_user_name') }}"
+    vault_password: "{{ lookup('cmt_user_password', 'new_user_password') }}"
 
   tasks:
     - name: Fetch username from environment variable or defined input
       set_fact:
-        user_name: "{{ cmtuser }}"
+        user_name: "{{ vault_username }}"
 
     - name: Fetch password from vault and hash it
       set_fact:
-        user_password_hashed: "{{ vault_password_secret | password_hash('sha512') }}"
+        user_password_hashed: "{{ vault_password | password_hash('sha512') }}"
 
     - name: Create user with hashed password
       user:
