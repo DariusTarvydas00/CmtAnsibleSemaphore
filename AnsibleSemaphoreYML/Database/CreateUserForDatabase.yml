@@ -1,0 +1,20 @@
+---
+- name: Create User from Ansible Semaphore Secrets
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create a user using secrets
+      user:
+        name: "{{ lookup('env', 'USER_NAME') }}"
+        password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Verify user creation
+      command: whoami
+      register: whoami_result
+
+    - name: Display the created username
+      debug:
+        msg: "Created user: {{ lookup('env', 'USER_NAME') }}"
