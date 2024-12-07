@@ -1,25 +1,27 @@
 ---
-- name: Create User Using Environment Variables
+- name: Create User Using Secure Password from Vault
   hosts: all
   become: true
-  
+  vars:
+    # Assuming the password is stored in Semaphore Vault as "new_user_password"
+    vault_password_secret: "{{ lookup('cmt_user_Vault', 'new_user_password') }}"
+
   tasks:
-    - name: Fetch username from environment variable
+    - name: Fetch username from environment variable or defined input
       set_fact:
         user_name: "{{ new_user_name }}"
 
-    - name: Fetch password from environment variable
+    - name: Fetch password from vault and hash it
       set_fact:
-        user_password: "{{ new_user_password | password_hash('sha512') }}"
+        user_password_hashed: "{{ vault_password_secret | password_hash('sha512') }}"
 
-    - name: Create user with environment variables
+    - name: Create user with hashed password
       user:
-        name: "{{ new_user_name }}"
-        password: "{{ new_user_password }}"
+        name: "{{ user_name }}"
+        password: "{{ user_password_hashed }}"
         shell: /bin/bash
         create_home: yes
 
     - name: Confirm user creation
       debug:
-        msg: "User {{ new_user_name }} has been created successfully."
-  
+        msg: "User {{ user_name }} has been created successfully."
