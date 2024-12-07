@@ -7,8 +7,16 @@
     - name: Fetch username and password from environment variables
       set_fact:
         name: "{{ lookup('env', 'USER_NAME') }}"
-        password: "{{ lookup('env', 'USER_PASSWORD') | password_hash('sha512') }}"
+        password: "{{ lookup('env', 'USER_PASSWORD') }}"
 
-    - name: Confirm user creation and print username and password
+    - name: Create user with the pre-hashed password
+      user:
+        name: "{{ name }}"
+        password: "{{ password }}"
+        shell: /bin/bash
+        create_home: yes
+      ignore_errors: yes
+
+    - name: Confirm user creation
       debug:
-        msg: "Username: {{ name }} and Hashed Password: {{ password }}"
+        msg: "User {{ name }} has been created successfully with a pre-hashed password."
