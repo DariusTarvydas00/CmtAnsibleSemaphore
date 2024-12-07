@@ -1,29 +1,9 @@
 ---
-- name: Gather and print all environment variables, extra-vars, and vault secrets
+- name: Access and print aaa variable
   hosts: all
   become: false
 
   tasks:
-    - name: Print all environment variables
+    - name: Print the aaa variable
       debug:
-        msg: "Environment Variables: {{ lookup('env', 'USER_NAME') }} {{ lookup('env', 'USER_PASSWORD') }}"
-
-    - name: Print all extra-vars defined in this playbook or passed via Semaphore
-      debug:
-        msg: "Extra Vars: {{ vars | dict2items | selectattr('value', 'defined') | map(attribute='key') | list }}"
-
-    - name: Print all vault secrets (using semaphore lookup)
-      debug:
-        msg: "Vault Secrets: USER_NAME={{ lookup('semaphore', 'USER_NAME') }} USER_PASSWORD={{ lookup('semaphore', 'USER_PASSWORD') }}"
-
-    - name: Print all variables in the current scope (including environment, extra-vars, and defaults)
-      debug:
-        msg: "All Variables in Scope: {{ vars }}"
-
-    - name: Print all facts for debugging purposes (host-specific variables)
-      debug:
-        var: ansible_facts
-
-    - name: Print all host variables
-      debug:
-        var: hostvars
+        msg: "The value of aaa is: {{ aaa }}"
