@@ -1,0 +1,17 @@
+---
+- name: Update and Upgrade Packages, Install Sudo
+  hosts: all
+  become: true  # Ensure we have root privileges to manage sudoers and other actions
+  vars:
+    user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
+    user_password: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password from environment
+
+  tasks:
+    - name: Update the package list
+      apt:
+        update_cache: yes
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        autoremove: yes
