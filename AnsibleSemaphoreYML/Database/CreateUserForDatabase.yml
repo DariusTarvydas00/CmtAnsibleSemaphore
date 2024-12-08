@@ -27,9 +27,10 @@
 
     # Ensure the user has sudo access in /etc/sudoers.d/{{ user_name }}
     - name: Grant sudo access to the user in /etc/sudoers.d
-      copy:
-        dest: "/etc/sudoers.d/{{ user_name }}"
-        content: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+      lineinfile:
+        path: "/etc/sudoers.d/{{ user_name }}"
+        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+        create: yes
         mode: '0440'
       validate: '/usr/sbin/visudo -cf %s'
 
