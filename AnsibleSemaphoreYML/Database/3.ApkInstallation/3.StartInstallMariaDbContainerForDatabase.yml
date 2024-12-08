@@ -13,10 +13,6 @@
     mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
-    # Define packages for MySQL and Python development
-    mysqlclient_package_debian: "libmariadbclient-dev"  # Use MariaDB development libraries
-    mysqlclient_package_redhat: "mariadb-devel"      # MariaDB development libraries
-    python_package: "mysqlclient"
 
   tasks:
     # Update apt/yum caches based on OS family
@@ -39,7 +35,7 @@
           - python3-pip
           - python3-dev
           - build-essential
-          - "{{ mysqlclient_package_debian }}"
+          - libmariadbclient-dev  # Directly use the package name for Debian
         state: present
 
     # Install prerequisites for MySQL and Python packages on RedHat/CentOS
@@ -50,13 +46,13 @@
           - python3-pip
           - python3-devel
           - gcc
-          - "{{ mysqlclient_package_redhat }}"
+          - mariadb-devel  # Directly use the package name for RedHat
         state: present
 
     # Install the mysqlclient Python package using pip
     - name: Install mysqlclient Python package
       pip:
-        name: "{{ python_package }}"
+        name: mysqlclient  # Directly use the package name for pip
         state: present
         executable: pip3
 
