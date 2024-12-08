@@ -1,0 +1,52 @@
+---
+- name: Setup MariaDB with Docker
+  hosts: all
+  become: true
+  become_method: sudo
+  become_user: root
+  vars:
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
+    mariadb_container_name: "mariadb_server"
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
+    mariadb_database: "{{ lookup('env', 'MARIADB_DATABASE') }}"
+    mariadb_user: "{{ lookup('env', 'MARIADB_USER') }}"
+    mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
+    mariadb_image: "mariadb:latest"
+
+  tasks:
+    - name: Pull the latest MariaDB Docker image
+      docker_image:
+        name: "{{ mariadb_image }}"
+        source: pull
+
+    - name: Create and start the MariaDB container
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        image: "{{ mariadb_image }}"
+        state: started
+        restart_policy: unless-stopped
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+          MYSQL_DATABASE: "{{ mariadb_database }}"
+          MYSQL_USER: "{{ mariadb_user }}"
+          MYSQL_PASSWORD: "{{ mariadb_user_password }}"
+        exposed_ports:
+          - "3306"
+        published_ports:
+          - "3306:3306"
+        volumes:
+          - mariadb_data:/var/lib/mysql
+        log_driver: "json-file"
+
+    - name: Check MariaDB container status
+      docker_container_info:
+        name: "{{ mariadb_container_name }}"
+      register: mariadb_container_status
+
+    - name: Show MariaDB container status
+      debug:
+        msg: "MariaDB container status: {{ mariadb_container_status }}"
+  
+  volumes:
+    mariadb_data:
+      driver: local
