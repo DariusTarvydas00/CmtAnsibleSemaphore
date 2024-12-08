@@ -1,23 +1,31 @@
 ---
-- name: Create User Using Secure Password from Vault
+- name: Create User and Ensure Sudo Access
   hosts: all
-  become: true
-
+  become: true  # Ensure we have root privileges to manage sudoers and other actions
   tasks:
+    # Step 1: Ensure cmtuser has sudo access (if not already)
+    - name: Ensure cmtuser is in the sudoers file
+      lineinfile:
+        path: /etc/sudoers
+        line: 'cmtuser ALL=(ALL) NOPASSWD: ALL'
+        validate: '/usr/sbin/visudo -cf %s'
+      when: ansible_user != "root"  # Only add this if we are not already root
+
+    # Step 2: Fetch username and password from environment variables
     - name: Fetch username and password from environment variables
       set_fact:
         user_name: "{{ lookup('env', 'USER_NAME') }}"
         user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
       register: username_password_fetch_result
-    
-    # Check if the first task (username fetch) failed, and skip all other tasks if it did
+
+    # Skip further tasks if username/password fetch failed
     - name: Skip further tasks if fetching username/password failed
       debug:
         msg: "Skipping further tasks as the first task failed."
       when: username_password_fetch_result.failed  # If the first task failed, we skip the others
       ignore_errors: true
 
-    # Check if the user already exists
+    # Step 3: Check if the user already exists
     - name: Check if the user already exists
       getent:
         database: passwd
@@ -26,7 +34,7 @@
       ignore_errors: true
       when: user_name is defined  # Only check if user_name is defined
 
-    # Create user if it does not exist
+    # Step 4: Create user if it does not exist
     - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
