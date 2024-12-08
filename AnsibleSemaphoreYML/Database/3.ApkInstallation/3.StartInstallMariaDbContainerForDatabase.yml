@@ -13,19 +13,32 @@
     mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
+    # Detect package name based on the distribution
+    mysqlclient_package: "libmysqlclient-dev"
 
   tasks:
     - name: Update apt package cache
       apt:
         update_cache: yes
 
-    - name: Install prerequisites for MySQL and Python packages
+    - name: Install prerequisites for MySQL and Python packages on Ubuntu/Debian
+      when: ansible_facts.os_family == "Debian"
       apt:
         name:
           - python3-pip
           - python3-dev
           - build-essential
-          - libmysqlclient-dev
+          - "{{ mysqlclient_package }}"
+        state: present
+
+    - name: Install prerequisites for MySQL and Python packages on RedHat/CentOS
+      when: ansible_facts.os_family == "RedHat"
+      yum:
+        name:
+          - python3-pip
+          - python3-devel
+          - gcc
+          - "{{ mysqlclient_package }}"
         state: present
 
     - name: Install mysqlclient Python package
