@@ -14,11 +14,12 @@
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
     # Define packages for MySQL and Python development
-    mysqlclient_package_debian: "libmysqlclient-dev"  # Try MySQL client development package
+    mysqlclient_package_debian: "libmariadbclient-dev"  # Use MariaDB development libraries
     mysqlclient_package_redhat: "mariadb-devel"      # MariaDB development libraries
     python_package: "mysqlclient"
 
   tasks:
+    # Update apt/yum caches based on OS family
     - name: Update apt package cache
       apt:
         update_cache: yes
@@ -30,6 +31,7 @@
         state: latest
       when: ansible_facts.os_family == "RedHat"
 
+    # Install prerequisites for MySQL and Python packages on Debian/Ubuntu
     - name: Install prerequisites for MySQL and Python packages on Debian/Ubuntu
       when: ansible_facts.os_family == "Debian"
       apt:
@@ -40,6 +42,7 @@
           - "{{ mysqlclient_package_debian }}"
         state: present
 
+    # Install prerequisites for MySQL and Python packages on RedHat/CentOS
     - name: Install prerequisites for MySQL and Python packages on RedHat/CentOS
       when: ansible_facts.os_family == "RedHat"
       yum:
@@ -50,34 +53,40 @@
           - "{{ mysqlclient_package_redhat }}"
         state: present
 
+    # Install the mysqlclient Python package using pip
     - name: Install mysqlclient Python package
       pip:
         name: "{{ python_package }}"
         state: present
         executable: pip3
 
+    # Pull the latest MariaDB Docker image
     - name: Pull the latest MariaDB Docker image
       docker_image:
         name: "{{ mariadb_image }}"
         source: pull
 
+    # Create a Docker volume for MariaDB data
     - name: Create a Docker volume for MariaDB data
       docker_volume:
         name: mariadb_data
         state: present
 
+    # Create custom Docker network
     - name: Create custom Docker network
       docker_network:
         name: "{{ mariadb_network_name }}"
         driver: bridge
         state: present
 
+    # Check if MariaDB container exists
     - name: Check if MariaDB container exists
       docker_container_info:
         name: "{{ mariadb_container_name }}"
       register: mariadb_container_status
       ignore_errors: true
 
+    # Remove existing MariaDB container if it exists
     - name: Remove the existing MariaDB container if it exists
       docker_container:
         name: "{{ mariadb_container_name }}"
@@ -86,6 +95,7 @@
         mariadb_container_status.containers is defined and
         mariadb_container_status.containers | length > 0
 
+    # Create and start the MariaDB container
     - name: Create and start the MariaDB container
       docker_container:
         name: "{{ mariadb_container_name }}"
@@ -106,6 +116,7 @@
         networks:
           - name: "{{ mariadb_network_name }}"  # Ensure it's attached to the custom network
 
+    # Wait for MariaDB to be accessible
     - name: Wait for MariaDB to be accessible
       wait_for:
         host: "localhost"
@@ -114,6 +125,7 @@
         timeout: 60
         state: started
 
+    # Check if MariaDB container is running
     - name: Check if MariaDB container is running
       command: docker ps -q -f name={{ mariadb_container_name }}
       register: mariadb_ps_check
@@ -122,10 +134,12 @@
       until:
         - mariadb_ps_check.stdout | length > 0
 
+    # Show MariaDB container status
     - name: Show MariaDB container status
       debug:
         msg: "MariaDB container is running with container ID: {{ mariadb_ps_check.stdout }}"
 
+    # Verify MariaDB is accessible
     - name: Verify MariaDB is accessible
       mysql_db:
         login_user: root
@@ -134,6 +148,7 @@
         state: present
       register: mariadb_check
 
+    # Show the result of the MariaDB database check
     - name: Show MariaDB check result
       debug:
         msg: "MariaDB database status: {{ mariadb_check }}"
