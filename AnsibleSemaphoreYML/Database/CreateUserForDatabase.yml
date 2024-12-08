@@ -19,10 +19,16 @@
         
     - name: Grant sudo permissions to the user
       lineinfile:
-        path: ~/etc/sudoers.d
+        path: /etc/sudoers.d/{{ user_name }}
         state: present
         regexp: '^{{ user_name }}'
         line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+        
+    - name: Set proper permissions for sudoers file (chmod 440)
+      file:
+        path: /etc/sudoers.d/{{ user_name }}
+        mode: '0440'
+        state: file
         
     - name: Set proper ownership and permissions for home directory
       file:
