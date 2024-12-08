@@ -29,7 +29,9 @@
       docker_container:
         name: "{{ mariadb_container_name }}"
         state: absent
-      when: mariadb_container_status is defined and mariadb_container_status.containers is defined and mariadb_container_status.containers | length > 0
+      when: mariadb_container_status is defined and
+        mariadb_container_status.containers is defined and
+        mariadb_container_status.containers | length > 0
 
     - name: Create a Docker volume for MariaDB data
       docker_volume:
@@ -60,7 +62,11 @@
       register: mariadb_container_status
       retries: 5
       delay: 10
-      until: mariadb_container_status.containers[0].State.Status == "running"
+      until:
+        - mariadb_container_status is defined
+        - mariadb_container_status.containers is defined
+        - mariadb_container_status.containers | length > 0
+        - mariadb_container_status.containers[0].State.Status == "running"
 
     - name: Show MariaDB container status
       debug:
