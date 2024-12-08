@@ -18,6 +18,11 @@
       docker_image:
         name: "{{ mariadb_image }}"
         source: pull
+        
+    - name: Create a Docker volume for MariaDB data
+      docker_volume:
+        name: mariadb_data
+        state: present
 
     - name: Create and start the MariaDB container
       docker_container:
@@ -45,5 +50,26 @@
     - name: Show MariaDB container status
       debug:
         msg: "MariaDB container status: {{ mariadb_container_status }}"
+        
+
+    - name: Wait for MariaDB to be accessible
+      wait_for:
+        host: "localhost"
+        port: 3306
+        delay: 10
+        timeout: 60
+        state: started
+        
+    - name: Verify MariaDB is accessible
+      mysql_db:
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+        name: "{{ mariadb_database }}"
+        state: present
+      register: mariadb_check
+      
+    - name: Show MariaDB check result
+      debug:
+        msg: "MariaDB database status: {{ mariadb_check }}"
   
   # Volumes are declared in the `docker_container` task, not at the playbook level
