@@ -13,6 +13,7 @@
     mysql_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"  # Official MariaDB image
     mysql_network_name: "mysql_network"  # Custom network for MySQL
+    ansible_python_interpreter: /usr/bin/python3
 
   tasks:
     # Update apt package cache
@@ -26,9 +27,10 @@
         name:
           - python3-pip
           - python3-dev
-          - pkg-config  # Required for building mysqlclient (not needed for PyMySQL)
-          - build-essential  # Compiler tools needed for mysqlclient (not needed for PyMySQL)
+          - pkg-config  # Required for building mysqlclient
+          - build-essential  # Compiler tools needed for mysqlclient
           - python3-venv  # Required to create a virtual environment
+          - default-libmysqlclient-dev  # Use the default MySQL client package
         state: present
 
     # Create a virtual environment for Python packages
@@ -45,7 +47,8 @@
         state: present
         executable: /opt/myenv/bin/pip
       loop:
-        - PyMySQL  # Use PyMySQL instead of mysqlclient
+        - PyMySQL
+        - mysqlclient
 
     # Pull the latest MariaDB Docker image
     - name: Pull the latest MariaDB Docker image
