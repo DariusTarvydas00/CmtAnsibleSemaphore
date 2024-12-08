@@ -9,13 +9,21 @@
         user_name: "{{ lookup('env', 'USER_NAME') }}"
         user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
 
-    - name: Create user with the pre-hashed password
+    - name: Check if the user already exists
+      getent:
+        database: passwd
+        key: "{{ user_name }}"
+      register: user_exists
+      ignore_errors: true
+
+    - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
         password: "{{ user_password }}"
         shell: /bin/bash
         create_home: yes
         state: present
+      when: user_exists.failed  # Only create the user if it doesn't exist
 
     - name: Ensure the sudoers directory exists
       file:
@@ -56,6 +64,6 @@
         mode: '0755'
         state: directory
 
-    - name: Confirm user creation
+    - name: Confirm user creation (or existence)
       debug:
-        msg: "User {{ user_name }} has been created successfully with a pre-hashed password."
+        msg: "User {{ user_name }} already exists or has been created successfully with a pre-hashed password."
