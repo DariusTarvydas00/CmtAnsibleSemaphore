@@ -1,5 +1,5 @@
 ---
-- name: Setup MariaDB with Docker and prerequisites
+- name: Setup MariaDB with Debian Docker and prerequisites
   hosts: all
   become: true
   become_method: sudo
@@ -11,55 +11,37 @@
     mariadb_database: "{{ lookup('env', 'MARIADB_DATABASE') }}"
     mariadb_user: "{{ lookup('env', 'MARIADB_USER') }}"
     mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
-    mariadb_image: "mariadb:latest"
+    debian_image: "debian:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
 
   tasks:
-    # Update apt/yum caches based on OS family
+    # Update apt package cache
     - name: Update apt package cache
       apt:
         update_cache: yes
-      when: ansible_facts.os_family == "Debian"
 
-    - name: Update yum package cache
-      yum:
-        name: "*"
-        state: latest
-      when: ansible_facts.os_family == "RedHat"
-
-    # Install prerequisites for MySQL and Python packages on Debian/Ubuntu
-    - name: Install prerequisites for MySQL and Python packages on Debian/Ubuntu
-      when: ansible_facts.os_family == "Debian"
+    # Install prerequisites for MariaDB and Python packages
+    - name: Install prerequisites for MariaDB and Python packages
       apt:
         name:
           - python3-pip
           - python3-dev
           - build-essential
-          - libmariadbclient-dev  # Directly use the package name for Debian
+          - libmariadbclient-dev  # Required for MariaDB client
+          - mariadb-server  # Install MariaDB server inside the container
         state: present
 
-    # Install prerequisites for MySQL and Python packages on RedHat/CentOS
-    - name: Install prerequisites for MySQL and Python packages on RedHat/CentOS
-      when: ansible_facts.os_family == "RedHat"
-      yum:
-        name:
-          - python3-pip
-          - python3-devel
-          - gcc
-          - mariadb-devel  # Directly use the package name for RedHat
-        state: present
-
-    # Install the mysqlclient Python package using pip
+    # Install the mysqlclient Python package (works for MariaDB too)
     - name: Install mysqlclient Python package
       pip:
-        name: mysqlclient  # Directly use the package name for pip
+        name: mysqlclient  # Install the mysqlclient Python package
         state: present
         executable: pip3
 
-    # Pull the latest MariaDB Docker image
-    - name: Pull the latest MariaDB Docker image
+    # Pull the latest Debian Docker image
+    - name: Pull the latest Debian Docker image
       docker_image:
-        name: "{{ mariadb_image }}"
+        name: "{{ debian_image }}"
         source: pull
 
     # Create a Docker volume for MariaDB data
@@ -95,7 +77,7 @@
     - name: Create and start the MariaDB container
       docker_container:
         name: "{{ mariadb_container_name }}"
-        image: "{{ mariadb_image }}"
+        image: "{{ debian_image }}"
         state: started
         restart_policy: unless-stopped
         env:
@@ -108,9 +90,15 @@
         published_ports:
           - "3306:3306"
         volumes:
-          - mariadb_data:/var/lib/mysql  # Volume is defined at the container level
+          - mariadb_data:/var/lib/mysql  # Volume for MariaDB data
         networks:
-          - name: "{{ mariadb_network_name }}"  # Ensure it's attached to the custom network
+          - name: "{{ mariadb_network_name }}"  # Attach to custom network
+        command: |
+          bash -c "
+            apt-get update &&
+            apt-get install -y mariadb-server &&
+            service mysql start &&
+            tail -f /dev/null"  # Keeps container running after starting MariaDB
 
     # Wait for MariaDB to be accessible
     - name: Wait for MariaDB to be accessible
@@ -144,7 +132,7 @@
         state: present
       register: mariadb_check
 
-    # Show the result of the MariaDB database check
+    # Show MariaDB check result
     - name: Show MariaDB check result
       debug:
         msg: "MariaDB database status: {{ mariadb_check }}"
