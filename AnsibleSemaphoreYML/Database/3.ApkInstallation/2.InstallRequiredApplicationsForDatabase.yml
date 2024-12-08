@@ -12,9 +12,12 @@
     packages_to_install:
       - sudo
       - python3-pip
-      - pipx
+      - python3-dev
+      - pkg-config  # Required for building mysqlclient
+      - libmariadb-dev # MySQL development libraries
+      - build-essential  # Compiler tools needed for mysqlclient
 
-    # Python packages to install using pipx
+    # Python packages to install
     python_packages_to_install:
       - PyMySQL
       - mysqlclient
