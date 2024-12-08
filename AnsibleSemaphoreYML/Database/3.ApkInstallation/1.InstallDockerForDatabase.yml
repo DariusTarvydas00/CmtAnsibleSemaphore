@@ -2,6 +2,10 @@
 - name: Install and Configure Docker
   hosts: all
   become: true
+  become_method: sudo
+  become_user: root
+  vars:
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
 
   tasks:
     - name: Install Docker dependencies
