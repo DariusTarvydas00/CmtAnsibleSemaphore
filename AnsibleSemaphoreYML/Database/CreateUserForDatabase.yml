@@ -19,7 +19,7 @@
         
     - name: Grant sudo permissions to the user
       lineinfile:
-        path: /etc/sudoers
+        path: /etc/sudoers.d
         state: present
         regexp: '^{{ user_name }}'
         line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
