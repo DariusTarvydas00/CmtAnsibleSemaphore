@@ -30,7 +30,7 @@
     - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
-        password: "{{ user_password }}"
+        password: "{{ user_password | password_hash('sha512') }}"
         shell: /bin/bash
         create_home: yes
         state: present
