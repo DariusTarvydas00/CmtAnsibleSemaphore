@@ -1,10 +1,11 @@
 ---
 - name: Modify SSH configuration for secure access
   hosts: all
-  become: true  # Use sudo to escalate privileges
-  become_method: sudo  # Use sudo for privilege escalation
+  become: true
+  become_method: sudo
+  become_user: root
   vars:
-    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password for sudo
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
   
   tasks:
     - name: Backup the original sshd_config file
@@ -13,17 +14,18 @@
         dest: /etc/ssh/sshd_config.backup
         backup: yes
 
-    - name: Ensure that the SSH config file contains desired settings
+    - name: Modify or add specific SSH settings in sshd_config
       lineinfile:
         path: /etc/ssh/sshd_config
-        line: "{{ item }}"
-        create: yes
+        regexp: '^{{ item.setting }}'  # Match the line starting with the setting
+        line: "{{ item.setting }} {{ item.value }}"  # Modify the line with the new value
+        create: yes  # Add the setting if it does not exist
       with_items:
-        - "LogLevel VERBOSE"
-        - "MaxAuthTries 6"
-        - "MaxSessions 10"
-        - "PermitEmptyPasswords no"
-        - "PermitRootLogin no"
+        - { setting: "LogLevel", value: "VERBOSE" }
+        - { setting: "MaxAuthTries", value: "6" }
+        - { setting: "MaxSessions", value: "10" }
+        - { setting: "PermitEmptyPasswords", value: "no" }
+        - { setting: "PermitRootLogin", value: "no" }
       notify: Restart SSH service
 
     - name: Restart SSH service to apply changes
