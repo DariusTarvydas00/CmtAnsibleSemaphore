@@ -2,8 +2,11 @@
 - name: Install specified packages
   hosts: all
   become: true
+  become_method: sudo
+  become_user: root
 
   vars:
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
     # Define the list of system packages you want to install
     packages_to_install:
       - sudo
