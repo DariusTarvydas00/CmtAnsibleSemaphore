@@ -14,18 +14,13 @@
     debian_image: "debian:latest"
     mysql_network_name: "mysql_network"  # Custom network for MySQL
 
-    # Define MySQL development package based on Debian version
-    mysqlclient_package:
-      debian_old: "libmysqlclient-dev"        # For Debian 8 or earlier
-      debian_new: "default-libmysqlclient-dev"  # For newer Debian versions
-
   tasks:
     # Update apt package cache
     - name: Update apt package cache
       apt:
         update_cache: yes
 
-    # Install system packages based on the Debian version
+    # Install system packages for MySQL and Python setup
     - name: Install system packages for MySQL and Python setup
       apt:
         name:
@@ -34,7 +29,7 @@
           - pkg-config  # Required for building mysqlclient
           - build-essential  # Compiler tools needed for mysqlclient
           - python3-venv  # Required to create a virtual environment
-          - "{{ (ansible_facts['distribution_version'] | version('8', '<')) | ternary(mysqlclient_package.debian_old, mysqlclient_package.debian_new) }}"
+          - default-libmysqlclient-dev  # Use the default MySQL client package
         state: present
 
     # Create a virtual environment for Python packages
