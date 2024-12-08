@@ -30,7 +30,7 @@
           - pkg-config
           - build-essential
           - python3-venv
-          - libmysqlclient-dev
+          - default-libmysqlclient-dev
         state: present
         
     # Install PyMySQL or mysqlclient in virtual environment
