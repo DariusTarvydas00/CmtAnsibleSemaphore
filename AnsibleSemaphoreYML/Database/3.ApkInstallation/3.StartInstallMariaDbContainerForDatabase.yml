@@ -1,5 +1,5 @@
 ---
-- name: Setup MariaDB with Docker
+- name: Setup MariaDB with Docker and prerequisites
   hosts: all
   become: true
   become_method: sudo
@@ -15,6 +15,31 @@
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
 
   tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites for MySQL and Python packages
+      apt:
+        name:
+          - python3-pip
+          - python3-dev
+          - build-essential
+          - libmysqlclient-dev
+        state: present
+
+    - name: Install mysqlclient Python package
+      pip:
+        name: mysqlclient
+        state: present
+        executable: pip3
+
+    - name: Install PyMySQL Python package (alternative to mysqlclient)
+      pip:
+        name: PyMySQL
+        state: present
+        executable: pip3
+
     - name: Pull the latest MariaDB Docker image
       docker_image:
         name: "{{ mariadb_image }}"
