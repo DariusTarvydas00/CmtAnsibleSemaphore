@@ -41,6 +41,16 @@
           - "3306:3306"
         volumes:
           - mariadb_data:/var/lib/mysql  # Volume is defined at the container level
+            
+    - name: Install Python3 and PyMySQL inside the MariaDB container
+      command: >
+        apt-get update && apt-get install -y python3 python3-pip && pip3 install PyMySQL
+      become: true
+      become_user: root
+      when: mariadb_container_status.state == "running"
+      delegate_to: "{{ inventory_hostname }}"
+      become_method: sudo
+      run_once: true
 
     - name: Check MariaDB container status
       docker_container_info:
