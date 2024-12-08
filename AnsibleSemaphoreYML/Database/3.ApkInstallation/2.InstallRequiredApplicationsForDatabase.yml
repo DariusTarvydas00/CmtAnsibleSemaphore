@@ -12,14 +12,12 @@
     packages_to_install:
       - sudo
       - python3-pip
-      - python3-dev
-      - libmariadb-dev  # MariaDB development library
-      - build-essential  # Useful for compiling packages
+      - pipx
 
-    # Python packages to install
+    # Python packages to install using pipx
     python_packages_to_install:
       - PyMySQL
-      - mysqlclient  # MySQL client library for Python
+      - mysqlclient
 
   tasks:
     - name: Install system packages
@@ -28,9 +26,6 @@
         state: present
       loop: "{{ packages_to_install }}"
 
-    - name: Install Python packages
-      pip:
-        name: "{{ item }}"
-        state: present
-        executable: pip3
+    - name: Install Python packages with pipx
+      command: pipx install "{{ item }}"
       loop: "{{ python_packages_to_install }}"
