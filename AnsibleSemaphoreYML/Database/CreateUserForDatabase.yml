@@ -17,12 +17,18 @@
         create_home: yes
         state: present
         
+    - name: Check if the sudoers file exists for the user
+      stat:
+        path: "/etc/sudoers.d/{{ user_name }}"
+      register: sudoers_file
+        
     - name: Grant sudo permissions to the user
       lineinfile:
         path: /etc/sudoers.d/{{ user_name }}
         state: present
         regexp: '^{{ user_name }}'
         line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+      when: not sudoers_file.stat.exists
         
     - name: Set proper permissions for sudoers file (chmod 440)
       file:
