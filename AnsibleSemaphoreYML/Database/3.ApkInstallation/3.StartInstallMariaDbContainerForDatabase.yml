@@ -41,6 +41,18 @@
           - "3306:3306"
         volumes:
           - mariadb_data:/var/lib/mysql  # Volume is defined at the container level
+          
+    - name: Check MariaDB container status
+      docker_container_info:
+        name: "{{ mariadb_container_name }}"
+      register: mariadb_container_status
+      retries: 5
+      delay: 10
+      until: mariadb_container_status.state == "running"
+
+    - name: Show MariaDB container status
+      debug:
+        msg: "MariaDB container status: {{ mariadb_container_status }}"
             
     - name: Install Python3 and PyMySQL inside the MariaDB container
       command: >
