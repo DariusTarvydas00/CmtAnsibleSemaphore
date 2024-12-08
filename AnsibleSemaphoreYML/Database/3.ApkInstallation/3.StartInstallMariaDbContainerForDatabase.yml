@@ -13,22 +13,31 @@
     mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
-    # Detect package name based on the distribution
-    mysqlclient_package: "libmysqlclient-dev"
+    # Define packages for MySQL and Python development
+    mysqlclient_package_debian: "libmariadbclient-dev"
+    mysqlclient_package_redhat: "mariadb-devel"
+    python_package: "mysqlclient"
 
   tasks:
     - name: Update apt package cache
       apt:
         update_cache: yes
+      when: ansible_facts.os_family == "Debian"
 
-    - name: Install prerequisites for MySQL and Python packages on Ubuntu/Debian
+    - name: Update yum package cache
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_facts.os_family == "RedHat"
+
+    - name: Install prerequisites for MySQL and Python packages on Debian/Ubuntu
       when: ansible_facts.os_family == "Debian"
       apt:
         name:
           - python3-pip
           - python3-dev
           - build-essential
-          - "{{ mysqlclient_package }}"
+          - "{{ mysqlclient_package_debian }}"
         state: present
 
     - name: Install prerequisites for MySQL and Python packages on RedHat/CentOS
@@ -38,18 +47,12 @@
           - python3-pip
           - python3-devel
           - gcc
-          - "{{ mysqlclient_package }}"
+          - "{{ mysqlclient_package_redhat }}"
         state: present
 
     - name: Install mysqlclient Python package
       pip:
-        name: mysqlclient
-        state: present
-        executable: pip3
-
-    - name: Install PyMySQL Python package (alternative to mysqlclient)
-      pip:
-        name: PyMySQL
+        name: "{{ python_package }}"
         state: present
         executable: pip3
 
