@@ -8,14 +8,7 @@
       set_fact:
         user_name: "{{ lookup('env', 'USER_NAME') }}"
         user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
-      register: username_password_fetch_result
-        
-    # Check if the first task (username fetch) failed, and skip all other tasks if it did
-    - name: Skip further tasks if fetching username/password failed
-      debug:
-        msg: "Skipping further tasks as the first task failed."
-      when: username_password_fetch_result.failed  # If the first task failed, we skip the others
-      ignore_errors: true
+      when: user_name is not defined or user_password is not defined
 
     - name: Check if the user already exists
       getent:
