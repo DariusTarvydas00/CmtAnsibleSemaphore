@@ -19,6 +19,18 @@
         name: "{{ mariadb_image }}"
         source: pull
 
+    - name: Check if MariaDB container exists
+      docker_container_info:
+        name: "{{ mariadb_container_name }}"
+      register: mariadb_container_status
+      ignore_errors: true
+
+    - name: Remove the existing MariaDB container if it exists
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        state: absent
+      when: mariadb_container_status is defined and mariadb_container_status.containers | length > 0
+
     - name: Create a Docker volume for MariaDB data
       docker_volume:
         name: mariadb_data
@@ -48,7 +60,7 @@
       register: mariadb_container_status
       retries: 5
       delay: 10
-      until: mariadb_container_status.state == "running"
+      until: mariadb_container_status.containers[0].State.Status == "running"
 
     - name: Show MariaDB container status
       debug:
@@ -60,7 +72,7 @@
       become: true
       become_user: root
       delegate_to: "{{ inventory_hostname }}"
-      when: mariadb_container_status.state == "running"
+      when: mariadb_container_status.containers[0].State.Status == "running"
       run_once: true
 
     - name: Wait for MariaDB to be accessible
