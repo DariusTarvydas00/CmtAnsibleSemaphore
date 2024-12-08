@@ -29,7 +29,7 @@
       docker_container:
         name: "{{ mariadb_container_name }}"
         state: absent
-      when: mariadb_container_status is defined and mariadb_container_status.containers | length > 0
+      when: mariadb_container_status is defined and mariadb_container_status.containers is defined and mariadb_container_status.containers | length > 0
 
     - name: Create a Docker volume for MariaDB data
       docker_volume:
