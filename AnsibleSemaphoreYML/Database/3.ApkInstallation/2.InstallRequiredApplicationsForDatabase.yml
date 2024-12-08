@@ -31,8 +31,10 @@
       loop: "{{ packages_to_install }}"
 
     - name: Create a virtual environment for Python packages
-      command: python3 -m venv /opt/myenv
-      creates: /opt/myenv
+      shell: python3 -m venv /opt/myenv
+      args:
+        creates: /opt/myenv/bin/activate  # Checks if the virtual environment exists
+      become: true
 
     - name: Install Python packages in the virtual environment
       pip:
@@ -40,8 +42,3 @@
         state: present
         executable: /opt/myenv/bin/pip
       loop: "{{ python_packages_to_install }}"
-
-    - name: Ensure virtual environment is activated (Optional)
-      shell: source /opt/myenv/bin/activate
-      args:
-        executable: /bin/bash
