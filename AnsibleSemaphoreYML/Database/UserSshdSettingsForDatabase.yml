@@ -1,0 +1,35 @@
+---
+- name: Modify SSH configuration and execute commands as cmtuser
+  hosts: all
+  become: true
+  tasks:
+    - name: Backup the original sshd_config file
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.backup
+        backup: yes
+
+    - name: Ensure that the SSH config file contains desired settings
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "{{ item }}"
+        create: yes
+      with_items:
+        - "LogLevel VERBOSE"
+        - "MaxAuthTries 6"
+        - "MaxSessions 10"
+        - "PermitEmptyPasswords no"
+        - "PermitRootLogin no"
+      notify: Restart SSH service
+
+    - name: Restart SSH service to apply changes
+      systemd:
+        name: sshd
+        state: restarted
+      become: true
+      when: ansible_facts['distribution'] == "Debian" or ansible_facts['distribution'] == "Ubuntu"
+
+    - name: Run a command as cmtuser (if needed)
+      command: "echo 'This is executed as cmtuser.'"
+      become: true
+      become_user: cmtuser
