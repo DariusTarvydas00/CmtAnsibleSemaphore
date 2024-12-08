@@ -12,7 +12,7 @@
     mariadb_user: "{{ lookup('env', 'MARIADB_USER') }}"
     mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
-
+    
   tasks:
     - name: Pull the latest MariaDB Docker image
       docker_image:
@@ -35,8 +35,7 @@
         published_ports:
           - "3306:3306"
         volumes:
-          - mariadb_data:/var/lib/mysql
-        log_driver: "json-file"
+          - mariadb_data:/var/lib/mysql  # Volume is defined at the container level
 
     - name: Check MariaDB container status
       docker_container_info:
@@ -47,6 +46,4 @@
       debug:
         msg: "MariaDB container status: {{ mariadb_container_status }}"
   
-  volumes:
-    mariadb_data:
-      driver: local
+  # Volumes are declared in the `docker_container` task, not at the playbook level
