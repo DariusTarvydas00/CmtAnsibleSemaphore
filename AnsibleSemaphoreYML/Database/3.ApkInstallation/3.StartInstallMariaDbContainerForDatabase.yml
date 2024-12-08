@@ -27,11 +27,21 @@
         name:
           - python3-pip
           - python3-dev
-          - pkg-config  # Required for building mysqlclient
-          - build-essential  # Compiler tools needed for mysqlclient
-          - python3-venv  # Required to create a virtual environment
-          - default-libmysqlclient-dev  # Use the default MySQL client package
+          - pkg-config
+          - build-essential
+          - python3-venv
+          - libmysqlclient-dev
         state: present
+        
+    # Install PyMySQL or mysqlclient in virtual environment
+    - name: Install MySQL Python packages
+      pip:
+        name: "{{ item }}"
+        state: present
+        executable: /opt/myenv/bin/pip
+      loop:
+        - PyMySQL
+        - mysqlclient
 
     # Create a virtual environment for Python packages
     - name: Create a virtual environment for Python packages
