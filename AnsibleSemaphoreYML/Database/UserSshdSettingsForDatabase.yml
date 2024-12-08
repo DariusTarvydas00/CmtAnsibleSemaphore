@@ -1,10 +1,10 @@
 ---
 - name: Modify SSH configuration for secure access
   hosts: all
-  become: true
-  become_method: sudo
+  become: true  # Use sudo to escalate privileges
+  become_method: sudo  # Use sudo for privilege escalation
   vars:
-    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password for sudo
   
   tasks:
     - name: Backup the original sshd_config file
