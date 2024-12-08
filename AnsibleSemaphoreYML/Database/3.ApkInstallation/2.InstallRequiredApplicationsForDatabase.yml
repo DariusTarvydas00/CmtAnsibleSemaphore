@@ -1,5 +1,5 @@
 ---
-- name: Install specified packages
+- name: Install prerequisites for MariaDB setup
   hosts: all
   become: true
   become_method: sudo
@@ -7,17 +7,19 @@
 
   vars:
     ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
-    # Define the list of system packages you want to install
+    
+    # System packages to install
     packages_to_install:
       - sudo
       - python3-pip
       - python3-dev
-      - libmysqlclient-dev  # Example system package
+      - libmariadb-dev  # MariaDB development library
+      - build-essential  # Useful for compiling packages
 
-    # Define the list of Python packages you want to install
+    # Python packages to install
     python_packages_to_install:
       - PyMySQL
-      - mysqlclient
+      - mysqlclient  # MySQL client library for Python
 
   tasks:
     - name: Install system packages
