@@ -1,18 +1,18 @@
 ---
-- name: Setup MariaDB with Debian Docker and prerequisites
+- name: Setup MySQL with Debian Docker and prerequisites
   hosts: all
   become: true
   become_method: sudo
   become_user: root
   vars:
     ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
-    mariadb_container_name: "mariadb_server"
-    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
-    mariadb_database: "{{ lookup('env', 'MARIADB_DATABASE') }}"
-    mariadb_user: "{{ lookup('env', 'MARIADB_USER') }}"
-    mariadb_user_password: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
+    mysql_container_name: "mysql_server"
+    mysql_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
+    mysql_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
+    mysql_user: "{{ lookup('env', 'MYSQL_USER') }}"
+    mysql_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     debian_image: "debian:latest"
-    mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
+    mysql_network_name: "mysql_network"  # Custom network for MySQL
 
   tasks:
     # Update apt package cache
@@ -20,18 +20,18 @@
       apt:
         update_cache: yes
 
-    # Install prerequisites for MariaDB and Python packages
-    - name: Install prerequisites for MariaDB and Python packages
+    # Install prerequisites for MySQL and Python packages
+    - name: Install prerequisites for MySQL and Python packages
       apt:
         name:
           - python3-pip
           - python3-dev
           - build-essential
-          - libmariadbclient-dev  # Required for MariaDB client
-          - mariadb-server  # Install MariaDB server inside the container
+          - libmysqlclient-dev  # Required for MySQL client
+          - mysql-server  # Install MySQL server inside the container
         state: present
 
-    # Install the mysqlclient Python package (works for MariaDB too)
+    # Install the mysqlclient Python package (for MySQL)
     - name: Install mysqlclient Python package
       pip:
         name: mysqlclient  # Install the mysqlclient Python package
@@ -44,64 +44,64 @@
         name: "{{ debian_image }}"
         source: pull
 
-    # Create a Docker volume for MariaDB data
-    - name: Create a Docker volume for MariaDB data
+    # Create a Docker volume for MySQL data
+    - name: Create a Docker volume for MySQL data
       docker_volume:
-        name: mariadb_data
+        name: mysql_data
         state: present
 
     # Create custom Docker network
     - name: Create custom Docker network
       docker_network:
-        name: "{{ mariadb_network_name }}"
+        name: "{{ mysql_network_name }}"
         driver: bridge
         state: present
 
-    # Check if MariaDB container exists
-    - name: Check if MariaDB container exists
+    # Check if MySQL container exists
+    - name: Check if MySQL container exists
       docker_container_info:
-        name: "{{ mariadb_container_name }}"
-      register: mariadb_container_status
+        name: "{{ mysql_container_name }}"
+      register: mysql_container_status
       ignore_errors: true
 
-    # Remove existing MariaDB container if it exists
-    - name: Remove the existing MariaDB container if it exists
+    # Remove existing MySQL container if it exists
+    - name: Remove the existing MySQL container if it exists
       docker_container:
-        name: "{{ mariadb_container_name }}"
+        name: "{{ mysql_container_name }}"
         state: absent
-      when: mariadb_container_status is defined and
-        mariadb_container_status.containers is defined and
-        mariadb_container_status.containers | length > 0
+      when: mysql_container_status is defined and
+        mysql_container_status.containers is defined and
+        mysql_container_status.containers | length > 0
 
-    # Create and start the MariaDB container
-    - name: Create and start the MariaDB container
+    # Create and start the MySQL container
+    - name: Create and start the MySQL container
       docker_container:
-        name: "{{ mariadb_container_name }}"
+        name: "{{ mysql_container_name }}"
         image: "{{ debian_image }}"
         state: started
         restart_policy: unless-stopped
         env:
-          MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-          MYSQL_DATABASE: "{{ mariadb_database }}"
-          MYSQL_USER: "{{ mariadb_user }}"
-          MYSQL_PASSWORD: "{{ mariadb_user_password }}"
+          MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+          MYSQL_DATABASE: "{{ mysql_database }}"
+          MYSQL_USER: "{{ mysql_user }}"
+          MYSQL_PASSWORD: "{{ mysql_user_password }}"
         exposed_ports:
           - "3306"
         published_ports:
           - "3306:3306"
         volumes:
-          - mariadb_data:/var/lib/mysql  # Volume for MariaDB data
+          - mysql_data:/var/lib/mysql  # Volume for MySQL data
         networks:
-          - name: "{{ mariadb_network_name }}"  # Attach to custom network
+          - name: "{{ mysql_network_name }}"  # Attach to custom network
         command: |
           bash -c "
             apt-get update &&
-            apt-get install -y mariadb-server &&
+            apt-get install -y mysql-server &&
             service mysql start &&
-            tail -f /dev/null"  # Keeps container running after starting MariaDB
+            tail -f /dev/null"  # Keeps container running after starting MySQL
 
-    # Wait for MariaDB to be accessible
-    - name: Wait for MariaDB to be accessible
+    # Wait for MySQL to be accessible
+    - name: Wait for MySQL to be accessible
       wait_for:
         host: "localhost"
         port: 3306
@@ -109,30 +109,30 @@
         timeout: 60
         state: started
 
-    # Check if MariaDB container is running
-    - name: Check if MariaDB container is running
-      command: docker ps -q -f name={{ mariadb_container_name }}
-      register: mariadb_ps_check
+    # Check if MySQL container is running
+    - name: Check if MySQL container is running
+      command: docker ps -q -f name={{ mysql_container_name }}
+      register: mysql_ps_check
       retries: 5
       delay: 10
       until:
-        - mariadb_ps_check.stdout | length > 0
+        - mysql_ps_check.stdout | length > 0
 
-    # Show MariaDB container status
-    - name: Show MariaDB container status
+    # Show MySQL container status
+    - name: Show MySQL container status
       debug:
-        msg: "MariaDB container is running with container ID: {{ mariadb_ps_check.stdout }}"
+        msg: "MySQL container is running with container ID: {{ mysql_ps_check.stdout }}"
 
-    # Verify MariaDB is accessible
-    - name: Verify MariaDB is accessible
+    # Verify MySQL is accessible
+    - name: Verify MySQL is accessible
       mysql_db:
         login_user: root
-        login_password: "{{ mariadb_root_password }}"
-        name: "{{ mariadb_database }}"
+        login_password: "{{ mysql_root_password }}"
+        name: "{{ mysql_database }}"
         state: present
-      register: mariadb_check
+      register: mysql_check
 
-    # Show MariaDB check result
-    - name: Show MariaDB check result
+    # Show MySQL check result
+    - name: Show MySQL check result
       debug:
-        msg: "MariaDB database status: {{ mariadb_check }}"
+        msg: "MySQL database status: {{ mysql_check }}"
