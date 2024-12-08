@@ -17,9 +17,10 @@
     - name: Modify or add specific SSH settings in sshd_config
       lineinfile:
         path: /etc/ssh/sshd_config
-        regexp: '^{{ item.setting }}'  # Match the line starting with the setting
+        regexp: '^#?{{ item.setting }}'  # Match the line with or without a comment (#)
         line: "{{ item.setting }} {{ item.value }}"  # Modify the line with the new value
         create: yes  # Add the setting if it does not exist
+        backrefs: yes  # Use backreferences in the regexp (important for uncommenting)
       with_items:
         - { setting: "LogLevel", value: "VERBOSE" }
         - { setting: "MaxAuthTries", value: "6" }
