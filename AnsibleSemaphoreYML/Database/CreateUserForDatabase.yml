@@ -11,8 +11,8 @@
 
     - name: Create user with the pre-hashed password
       user:
-        user_name: "{{ user_name }}"
-        user_password: "{{ user_password | password_hash('sha512') }}"
+        name: "{{ user_name }}"
+        password: "{{ user_password | password_hash('sha512') }}"
         shell: /bin/bash
         create_home: yes
         state: present
