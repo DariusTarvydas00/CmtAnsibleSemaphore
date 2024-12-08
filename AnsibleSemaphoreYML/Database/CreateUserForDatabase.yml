@@ -8,8 +8,16 @@
       set_fact:
         user_name: "{{ lookup('env', 'USER_NAME') }}"
         user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
-      when: user_name is not defined or user_password is not defined
+      register: username_password_fetch_result
+    
+    # Check if the first task (username fetch) failed, and skip all other tasks if it did
+    - name: Skip further tasks if fetching username/password failed
+      debug:
+        msg: "Skipping further tasks as the first task failed."
+      when: username_password_fetch_result.failed  # If the first task failed, we skip the others
+      ignore_errors: true
 
+    # Check if the user already exists
     - name: Check if the user already exists
       getent:
         database: passwd
@@ -18,6 +26,7 @@
       ignore_errors: true
       when: user_name is defined  # Only check if user_name is defined
 
+    # Create user if it does not exist
     - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
@@ -27,31 +36,36 @@
         state: present
       when: user_exists.failed  # Only create the user if it doesn't exist
 
+    # Inform if user creation was skipped
     - name: Inform if user creation was skipped
       debug:
         msg: "User {{ user_name }} already exists. Skipping user creation."
       when: user_exists.failed == false
 
+    # Ensure the sudoers directory exists
     - name: Ensure the sudoers directory exists
       file:
         path: "/etc/sudoers.d"
         state: directory
         mode: '0755'
-      when: not sudoers_file.stat.exists  # Only check if the sudoers file directory doesn't exist
+      when: user_exists.failed  # Ensure sudoers directory exists if user exists or created
 
+    # Check if the sudoers file exists for the user
     - name: Check if the sudoers file exists for the user
       stat:
         path: "/etc/sudoers.d/{{ user_name }}"
       register: sudoers_file
-      when: user_exists.failed  # Only check if user creation is successful or user doesn't exist
+      when: user_exists.failed  # Only check if user exists or created
 
+    # Create sudoers file if it does not exist
     - name: Create sudoers file if it does not exist
       file:
         path: "/etc/sudoers.d/{{ user_name }}"
         state: touch
         mode: '0440'
-      when: not sudoers_file.stat.exists  # Only create the sudoers file if it doesn't exist
+      when: sudoers_file.stat.exists is not defined or not sudoers_file.stat.exists  # Ensure it runs only if sudoers_file is not already defined
 
+    # Grant sudo permissions to the user
     - name: Grant sudo permissions to the user
       lineinfile:
         path: "/etc/sudoers.d/{{ user_name }}"
@@ -60,6 +74,7 @@
         line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
       when: sudoers_file.stat.exists  # Only grant sudo permissions if the sudoers file exists
 
+    # Set proper ownership and permissions for the sudoers file (chmod 440)
     - name: Set proper ownership and permissions for the sudoers file (chmod 440)
       file:
         path: "/etc/sudoers.d/{{ user_name }}"
@@ -67,6 +82,7 @@
         state: file
       when: sudoers_file.stat.exists  # Only set ownership and permissions if the sudoers file exists
 
+    # Set proper ownership and permissions for home directory
     - name: Set proper ownership and permissions for home directory
       file:
         path: "/home/{{ user_name }}"
@@ -76,6 +92,7 @@
         state: directory
       when: user_exists.failed  # Only set ownership and permissions if the user was created
 
+    # Confirm user creation (or existence)
     - name: Confirm user creation (or existence)
       debug:
         msg: "User {{ user_name }} already exists or has been created successfully with a pre-hashed password."
