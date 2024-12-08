@@ -5,6 +5,7 @@
   become_method: sudo
   become_user: root
   vars:
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
     mysql_container_name: "mysql_server"  # Name of the MySQL container
 
   tasks:
