@@ -71,7 +71,7 @@
         state: present
         regexp: '^{{ user_name }}'
         line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
-      when: sudoers_file.stat.exists  # Only grant sudo permissions if the sudoers file exists
+      when: sudoers_file.stat.exists is defined and sudoers_file.stat.exists  # Only grant sudo permissions if the sudoers file exists
 
     # Set proper ownership and permissions for the sudoers file (chmod 440)
     - name: Set proper ownership and permissions for the sudoers file (chmod 440)
@@ -79,7 +79,7 @@
         path: "/etc/sudoers.d/{{ user_name }}"
         mode: '0440'
         state: file
-      when: sudoers_file.stat.exists  # Only set ownership and permissions if the sudoers file exists
+      when: sudoers_file.stat.exists is defined and sudoers_file.stat.exists  # Only set ownership and permissions if the sudoers file exists
 
     # Set proper ownership and permissions for home directory
     - name: Set proper ownership and permissions for home directory
