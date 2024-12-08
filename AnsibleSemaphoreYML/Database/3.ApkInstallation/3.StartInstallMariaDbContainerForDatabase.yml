@@ -14,8 +14,8 @@
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"  # Custom network for MariaDB
     # Define packages for MySQL and Python development
-    mysqlclient_package_debian: "libmariadbclient-dev"
-    mysqlclient_package_redhat: "mariadb-devel"
+    mysqlclient_package_debian: "libmysqlclient-dev"  # Try MySQL client development package
+    mysqlclient_package_redhat: "mariadb-devel"      # MariaDB development libraries
     python_package: "mysqlclient"
 
   tasks:
