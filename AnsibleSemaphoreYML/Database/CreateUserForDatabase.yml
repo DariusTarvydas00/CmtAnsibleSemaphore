@@ -48,7 +48,6 @@
         path: "/etc/sudoers.d"
         state: directory
         mode: '0755'
-      when: user_exists.failed  # Ensure sudoers directory exists if user exists or created
 
     # Check if the sudoers file exists for the user
     - name: Check if the sudoers file exists for the user
