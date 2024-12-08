@@ -6,7 +6,7 @@
   become_user: root
   vars:
     ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
-    mysql_container_name: "mysql_server"  # Name of the MySQL container
+    mysql_container_name: "mariadb_server"  # Name of the MySQL container
 
   tasks:
     # Check if MySQL container is running
