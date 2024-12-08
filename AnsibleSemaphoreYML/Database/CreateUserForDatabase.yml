@@ -26,13 +26,16 @@
       when: user_exists.failed or user_exists is not defined
 
     # Ensure the user has sudo access in /etc/sudoers.d/{{ user_name }}
-    - name: Grant sudo access to the user in /etc/sudoers.d
-      lineinfile:
-        path: "/etc/sudoers.d/{{ user_name }}"
-        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
-        create: yes
+
+    - name: Grant sudo access to the user with validation
+      copy:
+        content: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL\n"
+        dest: "/etc/sudoers.d/{{ user_name }}"
         mode: '0440'
-      validate: '/usr/sbin/visudo -cf %s'
+        owner: root
+        group: root
+        validate: '/usr/sbin/visudo -cf %s'
+
 
     # Step 4: Set proper permissions for the home directory
     - name: Set proper ownership and permissions for the user's home directory
