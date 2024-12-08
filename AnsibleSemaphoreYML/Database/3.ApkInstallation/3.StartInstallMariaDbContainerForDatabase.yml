@@ -26,10 +26,9 @@
         name:
           - python3-pip
           - python3-dev
-          - pkg-config  # Required for building mysqlclient
-          - build-essential  # Compiler tools needed for mysqlclient
+          - pkg-config  # Required for building mysqlclient (not needed for PyMySQL)
+          - build-essential  # Compiler tools needed for mysqlclient (not needed for PyMySQL)
           - python3-venv  # Required to create a virtual environment
-          - default-libmysqlclient-dev  # Use the default MySQL client package
         state: present
 
     # Create a virtual environment for Python packages
@@ -46,8 +45,7 @@
         state: present
         executable: /opt/myenv/bin/pip
       loop:
-        - PyMySQL
-        - mysqlclient
+        - PyMySQL  # Use PyMySQL instead of mysqlclient
 
     # Pull the latest MariaDB Docker image
     - name: Pull the latest MariaDB Docker image
