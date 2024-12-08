@@ -1,6 +1,8 @@
 ---
 - name: Update and Upgrade Packages, Install Sudo
   hosts: all
+  become_method: sudo
+  become_user: root
   become: true  # Ensure we have root privileges to manage sudoers and other actions
   vars:
     user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
