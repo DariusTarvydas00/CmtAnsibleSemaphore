@@ -29,6 +29,9 @@
         state: present
       loop: "{{ packages_to_install }}"
 
-    - name: Install Python packages with pipx
-      command: pipx install "{{ item }}"
+    - name: Install Python packages with pip
+      pip:
+        name: "{{ item }}"
+        state: present
+        executable: pip3
       loop: "{{ python_packages_to_install }}"
