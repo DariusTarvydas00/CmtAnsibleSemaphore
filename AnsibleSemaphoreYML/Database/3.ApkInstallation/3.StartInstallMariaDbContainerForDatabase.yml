@@ -14,6 +14,8 @@
     debian_image: "debian:latest"
     mysql_network_name: "mysql_network"  # Custom network for MySQL
 
+  ansible_python_interpreter: /usr/bin/python3  # Ensure Python 3.x is used
+
   tasks:
     # Update apt package cache
     - name: Update apt package cache
