@@ -25,8 +25,16 @@
         state: present
       when: user_exists.failed or user_exists is not defined
 
-    # Ensure the user has sudo access in /etc/sudoers.d/{{ user_name }}
+    # Step 3: Ensure the sudoers.d directory exists and has proper permissions
+    - name: Ensure the sudoers.d directory exists and has proper permissions
+      file:
+        path: /etc/sudoers.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
 
+    # Ensure the user has sudo access in /etc/sudoers.d/{{ user_name }}
     - name: Grant sudo access to the user with validation
       copy:
         content: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL\n"
