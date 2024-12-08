@@ -2,39 +2,20 @@
 - name: Create User and Ensure Sudo Access
   hosts: all
   become: true  # Ensure we have root privileges to manage sudoers and other actions
+  vars:
+    user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
+    user_password: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password from environment
+
   tasks:
-    # Step 1: Ensure cmtuser has sudo access (if not already)
-    - name: Ensure cmtuser is in the sudoers file
-      lineinfile:
-        path: /etc/sudoers
-        line: 'cmtuser ALL=(ALL) NOPASSWD: ALL'
-        validate: '/usr/sbin/visudo -cf %s'
-      when: ansible_user != "root"  # Only add this if we are not already root
-
-    # Step 2: Fetch username and password from environment variables
-    - name: Fetch username and password from environment variables
-      set_fact:
-        user_name: "{{ lookup('env', 'USER_NAME') }}"
-        user_password: "{{ lookup('env', 'USER_PASSWORD') }}"
-      register: username_password_fetch_result
-
-    # Skip further tasks if username/password fetch failed
-    - name: Skip further tasks if fetching username/password failed
-      debug:
-        msg: "Skipping further tasks as the first task failed."
-      when: username_password_fetch_result.failed  # If the first task failed, we skip the others
-      ignore_errors: true
-
-    # Step 3: Check if the user already exists
+    # Step 1: Check if the user already exists
     - name: Check if the user already exists
       getent:
         database: passwd
         key: "{{ user_name }}"
       register: user_exists
-      ignore_errors: true
-      when: user_name is defined  # Only check if user_name is defined
+      ignore_errors: true  # Prevent failure if the user doesn't exist
 
-    # Step 4: Create user if it does not exist
+    # Step 2: Create the user if it doesn't exist
     - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
@@ -42,65 +23,27 @@
         shell: /bin/bash
         create_home: yes
         state: present
-      when: user_exists.failed  # Only create the user if it doesn't exist
+      when: user_exists.failed or user_exists is not defined
 
-    # Inform if user creation was skipped
-    - name: Inform if user creation was skipped
-      debug:
-        msg: "User {{ user_name }} already exists. Skipping user creation."
-      when: user_exists.failed == false
-
-    # Ensure the sudoers directory exists
-    - name: Ensure the sudoers directory exists
-      file:
-        path: "/etc/sudoers.d"
-        state: directory
-        mode: '0755'
-
-    # Check if the sudoers file exists for the user
-    - name: Check if the sudoers file exists for the user
-      stat:
-        path: "/etc/sudoers.d/{{ user_name }}"
-      register: sudoers_file
-      when: user_exists.failed  # Only check if user exists or created
-
-    # Create sudoers file if it does not exist
-    - name: Create sudoers file if it does not exist
-      file:
-        path: "/etc/sudoers.d/{{ user_name }}"
-        state: touch
+    # Ensure the user has sudo access in /etc/sudoers.d/{{ user_name }}
+    - name: Grant sudo access to the user in /etc/sudoers.d
+      copy:
+        dest: "/etc/sudoers.d/{{ user_name }}"
+        content: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
         mode: '0440'
-      when: sudoers_file.stat.exists is not defined or not sudoers_file.stat.exists  # Ensure it runs only if sudoers_file is not already defined
+      validate: '/usr/sbin/visudo -cf %s'
 
-    # Grant sudo permissions to the user
-    - name: Grant sudo permissions to the user
-      lineinfile:
-        path: "/etc/sudoers.d/{{ user_name }}"
-        state: present
-        regexp: '^{{ user_name }}'
-        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
-      when: sudoers_file.stat.exists is defined and sudoers_file.stat.exists  # Only grant sudo permissions if the sudoers file exists
-
-    # Set proper ownership and permissions for the sudoers file (chmod 440)
-    - name: Set proper ownership and permissions for the sudoers file (chmod 440)
-      file:
-        path: "/etc/sudoers.d/{{ user_name }}"
-        mode: '0440'
-        state: file
-      when: sudoers_file.stat.exists is defined and sudoers_file.stat.exists  # Only set ownership and permissions if the sudoers file exists
-
-    # Set proper ownership and permissions for home directory
-    - name: Set proper ownership and permissions for home directory
+    # Step 4: Set proper permissions for the home directory
+    - name: Set proper ownership and permissions for the user's home directory
       file:
         path: "/home/{{ user_name }}"
         owner: "{{ user_name }}"
         group: "{{ user_name }}"
         mode: '0755'
         state: directory
-      when: user_exists.failed  # Only set ownership and permissions if the user was created
+      when: user_exists.failed or user_exists is not defined
 
-    # Confirm user creation (or existence)
+    # Step 5: Confirm user creation or existence
     - name: Confirm user creation (or existence)
       debug:
-        msg: "User {{ user_name }} already exists or has been created successfully with a pre-hashed password."
-      when: user_exists.failed == false or user_exists.failed == true  # Display message whether user exists or was created
+        msg: "User {{ user_name }} has been created or already exists and has sudo access."
