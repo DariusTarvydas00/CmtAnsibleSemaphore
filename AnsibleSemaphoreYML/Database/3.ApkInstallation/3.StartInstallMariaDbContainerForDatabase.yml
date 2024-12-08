@@ -64,6 +64,20 @@
           - mariadb_data:/var/lib/mysql  # Volume is defined at the container level
         networks:
           - name: "{{ mariadb_network_name }}"  # Ensure it's attached to the custom network
+            
+    - name: Check if MariaDB container exists
+      docker_container_info:
+        name: "{{ mariadb_container_name }}"
+      register: mariadb_container_status
+      ignore_errors: true
+
+    - name: Wait for MariaDB container to start
+      wait_for:
+        host: "localhost"
+        port: 3306
+        delay: 10
+        timeout: 60
+        state: started
 
     - name: Check MariaDB container status
       docker_container_info:
@@ -73,9 +87,7 @@
       delay: 10
       until:
         - mariadb_container_status is defined
-        - mariadb_container_status.containers is defined
-        - mariadb_container_status.containers | length > 0
-        - mariadb_container_status.containers[0].State.Status == "running"
+        - mariadb_container_status.state == "running"
 
     - name: Show MariaDB container status
       debug:
