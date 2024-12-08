@@ -1,0 +1,31 @@
+---
+- name: Install specified packages
+  hosts: all
+  become: true
+
+  vars:
+    # Define the list of system packages you want to install
+    packages_to_install:
+      - sudo
+      - python3-pip
+      - python3-dev
+      - libmysqlclient-dev  # Example system package
+
+    # Define the list of Python packages you want to install
+    python_packages_to_install:
+      - PyMySQL
+      - mysqlclient
+
+  tasks:
+    - name: Install system packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages_to_install }}"
+
+    - name: Install Python packages
+      pip:
+        name: "{{ item }}"
+        state: present
+        executable: pip3
+      loop: "{{ python_packages_to_install }}"
