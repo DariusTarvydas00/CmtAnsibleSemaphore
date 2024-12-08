@@ -1,5 +1,5 @@
 ---
-- name: Update and Install Required Packages
+- name: Update and Upgrade Packages, Install Sudo
   hosts: all
   become: true
 
@@ -13,50 +13,7 @@
         upgrade: dist
         autoremove: yes
 
-    - name: Install specific packages including Docker dependencies
+    - name: Install sudo package
       apt:
-        name:
-          - sudo
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
+        name: sudo
         state: present
-
-    - name: Add Docker's official GPG key
-      shell: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-      args:
-        creates: /usr/share/keyrings/docker-archive-keyring.gpg
-
-    - name: Set up the Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-        state: present
-
-    - name: Update the package list after adding Docker repository
-      apt:
-        update_cache: yes
-
-    - name: Install Docker packages
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-        state: present
-
-    - name: Ensure Docker service is running
-      service:
-        name: docker
-        state: started
-        enabled: true
-
-    - name: Verify Docker installation
-      command: docker --version
-      register: docker_version
-      changed_when: false
-
-    - name: Display Docker version
-      debug:
-        msg: "Installed Docker version: {{ docker_version.stdout }}"
