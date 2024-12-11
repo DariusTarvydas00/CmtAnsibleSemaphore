@@ -1,5 +1,6 @@
 ---
 - name: Setup MariaDB container
+  hosts: all
   become: true
   become_method: sudo
   become_user: root
