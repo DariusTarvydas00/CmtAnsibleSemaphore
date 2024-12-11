@@ -41,10 +41,10 @@
         state: started
         restart_policy: unless-stopped
         env:
-          MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
-          MYSQL_DATABASE: "{{ mysql_database }}"
-          MYSQL_USER: "{{ mysql_user }}"
-          MYSQL_PASSWORD: "{{ mysql_user_password }}"
+          MARIADB_ROOT_PASSWORD: "{{ mysql_root_password }}"
+          MARIADB_DATABASE: "{{ mysql_database }}"
+          MARIADB_USER: "{{ mysql_user }}"
+          MARIADB_PASSWORD: "{{ mysql_user_password }}"
         volumes:
           - mysql_data:/var/lib/mysql
         networks:
