@@ -1,6 +1,6 @@
 ---
 - name: Setup MariaDB container
-  hosts: cabal_database
+  hosts: cabal-database
   become: true
   become_method: sudo
   become_user: root
