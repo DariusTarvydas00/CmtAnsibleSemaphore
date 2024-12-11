@@ -12,6 +12,7 @@
     mariadb_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"
+    custom_my_cnf: "/tmp/my.cnf"
 
   tasks:
     # Pull the latest MariaDB Docker image
@@ -33,6 +34,18 @@
         driver: bridge
         state: present
 
+    # Ensure a custom my.cnf file is created with bind-address set to 0.0.0.0
+    - name: Create custom my.cnf for MariaDB
+      copy:
+        dest: "{{ custom_my_cnf }}"
+        content: |
+          [mysqld]
+          bind-address = 0.0.0.0
+          skip-name-resolve
+        owner: root
+        group: root
+        mode: '0644'
+
     # Start MariaDB container with the necessary environment variables
     - name: Start MariaDB container
       docker_container:
@@ -47,6 +60,7 @@
           MARIADB_PASSWORD: "{{ mariadb_user_password }}"
         volumes:
           - mariadb_data:/var/lib/mysql
+          - "{{ custom_my_cnf }}:/etc/mysql/my.cnf"  # Mount the custom my.cnf
         networks:
           - name: "{{ mariadb_network_name }}"
         ports:
@@ -60,3 +74,14 @@
         delay: 10
         timeout: 60
         state: started
+
+    # Grant remote access to the MariaDB user
+    - name: Grant remote access to the MariaDB user
+      mysql_user:
+        name: "{{ mariadb_user }}"
+        password: "{{ mariadb_user_password }}"
+        host: "%"
+        priv: "*.*:ALL"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
