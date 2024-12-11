@@ -5,13 +5,13 @@
   become_method: sudo
   become_user: root
   vars:
-    mysql_container_name: "mariadb_server"
-    mysql_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
-    mysql_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
-    mysql_user: "{{ lookup('env', 'MYSQL_USER') }}"
-    mysql_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
+    mariadb_container_name: "mariadb_server"
+    mariadb_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
+    mariadb_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
+    mariadb_user: "{{ lookup('env', 'MYSQL_USER') }}"
+    mariadb_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
-    mysql_network_name: "mysql_network"
+    mariadb_network_name: "mariadb_network"
 
   tasks:
     # Pull the latest MariaDB Docker image
@@ -20,40 +20,40 @@
         name: "{{ mariadb_image }}"
         source: pull
 
-    # Create a Docker volume for MySQL data
-    - name: Create a Docker volume for MySQL data
+    # Create a Docker volume for MariaDB data
+    - name: Create a Docker volume for MariaDB data
       docker_volume:
-        name: mysql_data
+        name: mariadb_data
         state: present
 
-    # Create custom Docker network (if needed)
-    - name: Create custom Docker network
+    # Create a custom Docker network for MariaDB
+    - name: Create custom Docker network for MariaDB
       docker_network:
-        name: "{{ mysql_network_name }}"
+        name: "{{ mariadb_network_name }}"
         driver: bridge
         state: present
 
-    # Ensure MariaDB container is running
+    # Start MariaDB container with the necessary environment variables
     - name: Start MariaDB container
       docker_container:
-        name: "{{ mysql_container_name }}"
+        name: "{{ mariadb_container_name }}"
         image: "{{ mariadb_image }}"
         state: started
         restart_policy: unless-stopped
         env:
-          MARIADB_ROOT_PASSWORD: "{{ mysql_root_password }}"
-          MARIADB_DATABASE: "{{ mysql_database }}"
-          MARIADB_USER: "{{ mysql_user }}"
-          MARIADB_PASSWORD: "{{ mysql_user_password }}"
+          MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+          MARIADB_DATABASE: "{{ mariadb_database }}"
+          MARIADB_USER: "{{ mariadb_user }}"
+          MARIADB_PASSWORD: "{{ mariadb_user_password }}"
         volumes:
-          - mysql_data:/var/lib/mysql
+          - mariadb_data:/var/lib/mysql
         networks:
-          - name: "{{ mysql_network_name }}"
+          - name: "{{ mariadb_network_name }}"
         ports:
           - "3306:3306"
 
-    # Wait for MySQL to be accessible
-    - name: Wait for MySQL to be accessible
+    # Wait for MariaDB to be accessible on port 3306
+    - name: Wait for MariaDB to be accessible
       wait_for:
         host: "127.0.0.1"
         port: 3306
