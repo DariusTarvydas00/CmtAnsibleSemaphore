@@ -1,7 +1,9 @@
 ---
 - name: Setup MariaDB container
-  hosts: localhost
+  hosts: cabal_database
   become: true
+  become_method: sudo
+  become_user: root
   vars:
     mysql_container_name: "mariadb_server"
     mysql_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
