@@ -4,6 +4,7 @@
   become: true
   become_method: sudo
   become_user: root
+  gather_facts: false
   vars:
     mysql_container_name: "mariadb_server"
     mysql_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
