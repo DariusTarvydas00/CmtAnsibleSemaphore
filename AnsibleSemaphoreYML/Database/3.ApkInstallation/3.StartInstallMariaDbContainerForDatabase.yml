@@ -1,11 +1,53 @@
 ---
+- name: Install prerequisites for MariaDB setup
+  hosts: all
+  become: true
+  become_method: sudo
+  become_user: root
+
+  vars:
+    ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
+    # System packages to install
+    packages_to_install:
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - pkg-config  # Required for building mysqlclient
+      - libmariadb-dev # MySQL development libraries
+      - build-essential  # Compiler tools needed for mysqlclient
+
+    # Python packages to install
+    python_packages_to_install:
+      - PyMySQL
+
+  tasks:
+    - name: Install system packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages_to_install }}"
+
+    - name: Create a virtual environment for Python packages
+      shell: python3 -m venv /opt/myenv
+      args:
+        creates: /opt/myenv/bin/activate
+      become: true
+
+    - name: Install Python packages in the virtual environment
+      pip:
+        name: "{{ item }}"
+        state: present
+        executable: /opt/myenv/bin/pip
+      loop: "{{ python_packages_to_install }}"
+
+---
 - name: Setup MariaDB container
   hosts: all
   become: true
   become_method: sudo
   become_user: root
+
   vars:
-    ansible_python_interpreter: /usr/bin/python3
     mariadb_container_name: "mariadb_server"
     mariadb_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
     mariadb_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
@@ -13,22 +55,9 @@
     mariadb_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"
+    ansible_python_interpreter: /opt/myenv/bin/python
 
   tasks:
-    - name: Install required Python libraries
-      apt:
-        name:
-          - python3-pip
-          - python3-dev
-          - libmariadb-dev
-        state: present
-
-    - name: Install PyMySQL Python library
-      pip:
-        name: PyMySQL
-        state: present
-        executable: pip3
-    
     # Pull the latest MariaDB Docker image
     - name: Pull the latest MariaDB Docker image
       docker_image:
@@ -48,7 +77,7 @@
         driver: bridge
         state: present
 
-    # Start MariaDB container with the necessary environment variables
+    # Ensure MariaDB container is started
     - name: Start MariaDB container
       docker_container:
         name: "{{ mariadb_container_name }}"
@@ -66,9 +95,6 @@
           - name: "{{ mariadb_network_name }}"
         ports:
           - "3306:3306"
-        command:
-          - "--bind-address=0.0.0.0"
-          - "--skip-name-resolve"
 
     # Wait for MariaDB to be accessible on port 3306
     - name: Wait for MariaDB to be accessible
@@ -89,13 +115,3 @@
         state: present
         login_user: root
         login_password: "{{ mariadb_root_password }}"
-
-    - name: Validate MariaDB connectivity
-      shell: |
-        mysqladmin ping -h127.0.0.1 -P3306 -u"{{ mariadb_user }}" -p"{{ mariadb_user_password }}"
-      register: mariadb_ping
-      ignore_errors: true
-
-    - name: Debug MariaDB connectivity result
-      debug:
-        var: mariadb_ping
