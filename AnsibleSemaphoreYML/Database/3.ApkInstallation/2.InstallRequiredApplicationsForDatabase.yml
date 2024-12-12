@@ -7,27 +7,20 @@
 
   vars:
     ansible_sudo_pass: "{{ lookup('env', 'USER_PASSWORD') }}"
-    
     # System packages to install
     packages_to_install:
-      - sudo
       - python3-pip
+      - python3-venv
       - python3-dev
       - pkg-config  # Required for building mysqlclient
       - libmariadb-dev # MySQL development libraries
       - build-essential  # Compiler tools needed for mysqlclient
-      - python3-venv  # Required to create a virtual environment
 
     # Python packages to install
     python_packages_to_install:
       - PyMySQL
-      - mysqlclient
 
   tasks:
-    - name: Update APT cache
-      apt:
-        update_cache: yes  
-      
     - name: Install system packages
       apt:
         name: "{{ item }}"
@@ -37,7 +30,7 @@
     - name: Create a virtual environment for Python packages
       shell: python3 -m venv /opt/myenv
       args:
-        creates: /opt/myenv/bin/activate  # Checks if the virtual environment exists
+        creates: /opt/myenv/bin/activate
       become: true
 
     - name: Install Python packages in the virtual environment
