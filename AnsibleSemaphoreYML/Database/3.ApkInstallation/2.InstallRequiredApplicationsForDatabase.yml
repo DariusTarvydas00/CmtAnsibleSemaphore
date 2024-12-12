@@ -19,6 +19,7 @@
     # Python packages to install
     python_packages_to_install:
       - PyMySQL
+      - requests
 
   tasks:
     - name: Install system packages
