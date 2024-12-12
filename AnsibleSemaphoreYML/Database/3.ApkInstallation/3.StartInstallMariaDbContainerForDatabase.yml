@@ -5,6 +5,7 @@
   become_method: sudo
   become_user: root
   vars:
+    ansible_python_interpreter: /usr/bin/python3
     mariadb_container_name: "mariadb_server"
     mariadb_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
     mariadb_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
@@ -14,6 +15,20 @@
     mariadb_network_name: "mariadb_network"
 
   tasks:
+    - name: Install required Python libraries
+      apt:
+        name:
+          - python3-pip
+          - python3-dev
+          - libmariadb-dev
+      state: present
+
+    - name: Install PyMySQL Python library
+      pip:
+        name: PyMySQL
+        state: present
+        executable: pip3
+    
     # Pull the latest MariaDB Docker image
     - name: Pull the latest MariaDB Docker image
       docker_image:
