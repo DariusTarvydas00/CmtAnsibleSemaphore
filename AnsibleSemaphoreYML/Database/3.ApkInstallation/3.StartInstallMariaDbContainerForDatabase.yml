@@ -12,7 +12,6 @@
     mariadb_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
     mariadb_image: "mariadb:latest"
     mariadb_network_name: "mariadb_network"
-    custom_my_cnf: "/tmp/my.cnf"
 
   tasks:
     # Pull the latest MariaDB Docker image
@@ -34,18 +33,6 @@
         driver: bridge
         state: present
 
-    # Ensure a custom my.cnf file is created with bind-address set to 0.0.0.0
-    - name: Create custom my.cnf for MariaDB
-      copy:
-        dest: "{{ custom_my_cnf }}"
-        content: |
-          [mysqld]
-          bind-address = 0.0.0.0
-          skip-name-resolve
-        owner: root
-        group: root
-        mode: '0644'
-
     # Start MariaDB container with the necessary environment variables
     - name: Start MariaDB container
       docker_container:
@@ -60,11 +47,13 @@
           MARIADB_PASSWORD: "{{ mariadb_user_password }}"
         volumes:
           - mariadb_data:/var/lib/mysql
-          - "{{ custom_my_cnf }}:/etc/mysql/my.cnf"  # Mount the custom my.cnf
         networks:
           - name: "{{ mariadb_network_name }}"
         ports:
           - "3306:3306"
+        command:
+          - "--bind-address=0.0.0.0"
+          - "--skip-name-resolve"
 
     # Wait for MariaDB to be accessible on port 3306
     - name: Wait for MariaDB to be accessible
@@ -85,3 +74,13 @@
         state: present
         login_user: root
         login_password: "{{ mariadb_root_password }}"
+
+    - name: Validate MariaDB connectivity
+      shell: |
+        mysqladmin ping -h127.0.0.1 -P3306 -u"{{ mariadb_user }}" -p"{{ mariadb_user_password }}"
+      register: mariadb_ping
+      ignore_errors: true
+
+    - name: Debug MariaDB connectivity result
+      debug:
+        var: mariadb_ping
