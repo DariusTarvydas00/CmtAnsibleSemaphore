@@ -21,7 +21,7 @@
           - python3-pip
           - python3-dev
           - libmariadb-dev
-      state: present
+        state: present
 
     - name: Install PyMySQL Python library
       pip:
