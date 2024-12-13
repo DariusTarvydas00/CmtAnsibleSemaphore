@@ -12,8 +12,3 @@
       apt:
         upgrade: dist
         autoremove: yes
-
-    - name: Install sudo package
-      apt:
-        name: sudo
-        state: present
