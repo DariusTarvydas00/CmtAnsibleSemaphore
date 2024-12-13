@@ -5,7 +5,7 @@
   become_user: root
   become: true  # Ensure we have root privileges to manage sudoers and other actions
   vars:
-    user_name: "{{ lookup('vault', 'asd.asd') }}"  # Fetch username from Ansible Vault
+    user_name: "{{ lookup('vault', 'asd') }}"  # Fetch username from Ansible Vault
 
   tasks:
 #    - name: Update the package list
@@ -19,7 +19,7 @@
 
     - name: Print from Vault
       debug:
-        msg: "The USER_NAME is: {{ asd }}"
+        msg: "The USER_NAME is: {{ user_name }}"
 
 #---
 #- name: Update and Upgrade Packages, Install Sudo
