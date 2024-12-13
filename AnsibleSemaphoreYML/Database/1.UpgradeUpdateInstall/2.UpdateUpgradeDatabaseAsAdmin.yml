@@ -9,14 +9,14 @@
     user_password: "{{ lookup('vault', 'USER_PASSWORD') }}"  # Fetch password from Ansible Vault
 
   tasks:
-    - name: Update the package list
-      apt:
-        update_cache: yes
-
-    - name: Upgrade all packages
-      apt:
-        upgrade: dist
-        autoremove: yes
+#    - name: Update the package list
+#      apt:
+#        update_cache: yes
+#
+#    - name: Upgrade all packages
+#      apt:
+#        upgrade: dist
+#        autoremove: yes
 
     - name: Print USER_NAME from Vault
       debug:
