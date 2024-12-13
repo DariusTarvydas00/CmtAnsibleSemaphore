@@ -1,102 +1,47 @@
-version: "3.4"
+---
+- name: Setup MariaDB container
+  hosts: all
+  become: true
+  vars:
+    mariadb_container_name: "mariadb_server"
+    mariadb_image: "mariadb:latest"
+    mariadb_network_name: "mariadb_network"
 
-volumes:
-  mariadb_data:
+  tasks:
+    # Pull the latest MariaDB Docker image
+    - name: Pull MariaDB Docker image
+      docker_image:
+        name: "{{ mariadb_image }}"
+        source: pull
 
-networks:
-  mariadb_network:
-    driver: bridge
+    # Create a Docker volume for MariaDB data
+    - name: Create Docker volume for MariaDB data
+      docker_volume:
+        name: mariadb_data
+        state: present
 
-services:
-  mariadb_server:
-    image: mariadb:latest
-    container_name: mariadb_server
-    restart: unless-stopped
-    environment:
-      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${MYSQL_DATABASE}
-      MARIADB_USER: ${MYSQL_USER}
-      MARIADB_PASSWORD: ${MYSQL_USER_PASSWORD}
-    volumes:
-      - mariadb_data:/var/lib/mysql
-    networks:
-      - mariadb_network
-    ports:
-      - "3306:3306"
+    # Ensure MariaDB container is started
+    - name: Start MariaDB container
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        image: "{{ mariadb_image }}"
+        state: started
+        restart_policy: unless-stopped
+        env:
+          MARIADB_ROOT_PASSWORD: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
+          MARIADB_DATABASE: "{{ lookup('env', 'MYSQL_DATABASE') }}"
+          MARIADB_USER: "{{ lookup('env', 'MYSQL_USER') }}"
+          MARIADB_PASSWORD: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
+        volumes:
+          - mariadb_data:/var/lib/mysql
+        ports:
+          - "3306:3306"
 
-
-#---
-#- name: Setup MariaDB container
-#  hosts: all
-#  become: true
-#  become_method: sudo
-#  become_user: root
-#
-#  vars:
-#    mariadb_container_name: "mariadb_server"
-#    mariadb_root_password: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
-#    mariadb_database: "{{ lookup('env', 'MYSQL_DATABASE') }}"
-#    mariadb_user: "{{ lookup('env', 'MYSQL_USER') }}"
-#    mariadb_user_password: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
-#    mariadb_image: "mariadb:latest"
-#    mariadb_network_name: "mariadb_network"
-#    ansible_python_interpreter: /opt/myenv/bin/python
-#
-#  tasks:
-#    # Pull the latest MariaDB Docker image
-#    - name: Pull the latest MariaDB Docker image
-#      docker_image:
-#        name: "{{ mariadb_image }}"
-#        source: pull
-#
-#    # Create a Docker volume for MariaDB data
-#    - name: Create a Docker volume for MariaDB data
-#      docker_volume:
-#        name: mariadb_data
-#        state: present
-#
-#    # Create a custom Docker network for MariaDB
-#    - name: Create custom Docker network for MariaDB
-#      docker_network:
-#        name: "{{ mariadb_network_name }}"
-#        driver: bridge
-#        state: present
-#
-#    # Ensure MariaDB container is started
-#    - name: Start MariaDB container
-#      docker_container:
-#        name: "{{ mariadb_container_name }}"
-#        image: "{{ mariadb_image }}"
-#        state: started
-#        restart_policy: unless-stopped
-#        env:
-#          MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-#          MARIADB_DATABASE: "{{ mariadb_database }}"
-#          MARIADB_USER: "{{ mariadb_user }}"
-#          MARIADB_PASSWORD: "{{ mariadb_user_password }}"
-#        volumes:
-#          - mariadb_data:/var/lib/mysql
-#        networks:
-#          - name: "{{ mariadb_network_name }}"
-#        ports:
-#          - "3306:3306"
-#
-#    # Wait for MariaDB to be accessible on port 3306
-#    - name: Wait for MariaDB to be accessible
-#      wait_for:
-#        host: "127.0.0.1"
-#        port: 3306
-#        delay: 10
-#        timeout: 60
-#        state: started
-#
-#    # Grant remote access to the MariaDB user
-#    - name: Grant remote access to the MariaDB user
-#      mysql_user:
-#        name: "{{ mariadb_user }}"
-#        password: "{{ mariadb_user_password }}"
-#        host: "%"
-#        priv: "*.*:ALL"
-#        state: present
-#        login_user: root
-#        login_password: "{{ mariadb_root_password }}"
+    # Wait for MariaDB to be accessible on port 3306
+    - name: Wait for MariaDB to be accessible
+      wait_for:
+        host: "127.0.0.1"
+        port: 3306
+        delay: 10
+        timeout: 60
+        state: started
