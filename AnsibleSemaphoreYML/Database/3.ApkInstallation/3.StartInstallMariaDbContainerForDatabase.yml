@@ -28,10 +28,10 @@
         state: started
         restart_policy: unless-stopped
         env:
-          MARIADB_ROOT_PASSWORD: "{{ lookup('env', 'MYSQL_ROOT_PASSWORD') }}"
-          MARIADB_DATABASE: "{{ lookup('env', 'MYSQL_DATABASE') }}"
-          MARIADB_USER: "{{ lookup('env', 'MYSQL_USER') }}"
-          MARIADB_PASSWORD: "{{ lookup('env', 'MYSQL_USER_PASSWORD') }}"
+          MARIADB_ROOT_PASSWORD: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
+          MARIADB_DATABASE: "{{ lookup('env', 'MARIADB_DATABASE') }}"
+          MARIADB_USER: "{{ lookup('env', 'MARIADB_USER') }}"
+          MARIADB_PASSWORD: "{{ lookup('env', 'MARIADB_USER_PASSWORD') }}"
         volumes:
           - mariadb_data:/var/lib/mysql
         ports:
