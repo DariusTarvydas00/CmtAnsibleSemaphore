@@ -1,4 +1,8 @@
 ---
+hosts: all
+become: true
+
+tasks:
 - name: Update the package list
   apt:
     update_cache: yes
