@@ -1,129 +1,49 @@
-- name: Check Firewall and MariaDB Port Status and Open Port if Needed
+- name: Open port 3306 for MariaDB and Enable Firewall
   hosts: all
   become: true
   tasks:
 
-    - name: Check if firewalld is installed
-      stat:
-        path: /usr/bin/firewall-cmd
-      register: firewalld_installed
+    - name: Install firewalld if not installed
+      package:
+        name: firewalld
+        state: present
 
-    - name: Check if ufw is installed
-      stat:
-        path: /usr/sbin/ufw
-      register: ufw_installed
+    - name: Start firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: true
 
-    - name: Check if iptables is installed
-      stat:
-        path: /sbin/iptables
-      register: iptables_installed
-
-    - name: Set firewall tool
-      set_fact:
-        firewall_tool: >
-          {% if firewalld_installed.stat.exists %}
-            firewalld
-          {% elif ufw_installed.stat.exists %}
-            ufw
-          {% elif iptables_installed.stat.exists %}
-            iptables
-          {% else %}
-            none
-          {% endif %}
-
-    - name: Print the detected firewall tool
-      debug:
-        msg: "Detected firewall tool: {{ firewall_tool }}"
-
-    - name: Check if firewall is active using firewalld
-      command: firewall-cmd --state
-      register: firewalld_status
-      when: firewall_tool == 'firewalld'
-      ignore_errors: yes
-
-    - name: Check if firewall is active using ufw
-      command: ufw status
-      register: ufw_status
-      when: firewall_tool == 'ufw'
-      ignore_errors: yes
-
-    - name: Check if firewall is active using iptables
-      command: iptables -L
-      register: iptables_status
-      when: firewall_tool == 'iptables'
-      ignore_errors: yes
-
-    - name: Set firewall active status
-      set_fact:
-        firewall_status: "{{ firewalld_status.stdout if firewalld_status.rc is defined and firewalld_status.rc == 0 else
-                             (ufw_status.stdout if ufw_status.rc is defined and ufw_status.rc == 0 else
-                             (iptables_status.stdout if iptables_status.rc is defined and iptables_status.rc == 0 else 'none')) }}"
-
-    - name: Print firewall status
-      debug:
-        msg: "Firewall status: {{ firewall_status }}"
-
-    - name: Check if port 3306 is open in firewalld
-      command: firewall-cmd --query-port=3306/tcp
-      register: port_status_firewalld
-      when: firewall_tool == 'firewalld'
-      ignore_errors: yes
-
-    - name: Check if port 3306 is open in ufw
-      command: ufw status
-      register: port_status_ufw
-      when: firewall_tool == 'ufw'
-      ignore_errors: yes
-
-    - name: Check if port 3306 is open in iptables
-      command: iptables -L -n
-      register: port_status_iptables
-      when: firewall_tool == 'iptables'
-      ignore_errors: yes
-
-    - name: Set port status
-      set_fact:
-        port_status: >
-          {% if port_status_firewalld.rc is defined and port_status_firewalld.rc == 0 %}
-            {{ port_status_firewalld.stdout }}
-          {% elif port_status_ufw.rc is defined and port_status_ufw.rc == 0 %}
-            {{ port_status_ufw.stdout }}
-          {% elif port_status_iptables.rc is defined and port_status_iptables.rc == 0 %}
-            {{ port_status_iptables.stdout }}
-          {% else %}
-            "Port check failed"
-          {% endif %}
-
-    - name: Print port 3306 status
-      debug:
-        msg: "Port 3306 status: {{ port_status }}"
-
-    - name: Open port 3306 in firewalld if closed
+    - name: Open port 3306 for MariaDB in firewalld
       command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
-      when: port_status_firewalld.stdout == "no" and firewall_tool == 'firewalld'
       notify:
         - Reload firewalld
 
-    - name: Open port 3306 in ufw if closed
-      command: ufw allow 3306/tcp
-      when: port_status_ufw.rc == 0 and port_status_ufw.stdout not search("3306")
-      notify:
-        - Reload ufw
+    - name: Reload firewalld to apply changes
+      service:
+        name: firewalld
+        state: reloaded
 
-    - name: Open port 3306 in iptables if closed
-      command: iptables -A INPUT -p tcp --dport 3306 -j ACCEPT
-      when: port_status_iptables.rc == 0 and port_status_iptables.stdout not search("3306")
-      notify:
-        - Save iptables rules
+    - name: Check if port 3306 is open in firewalld
+      command: firewall-cmd --query-port=3306/tcp
+      register: port_status
+      changed_when: false
+
+    - name: Print port status
+      debug:
+        msg: "Port 3306 status: {{ port_status.stdout }}"
+
+    - name: Ensure firewalld is active
+      command: firewall-cmd --state
+      register: firewall_state
+      changed_when: false
+
+    - name: Print firewall state
+      debug:
+        msg: "Firewall state: {{ firewall_state.stdout }}"
 
   handlers:
     - name: Reload firewalld
       service:
         name: firewalld
         state: reloaded
-
-    - name: Reload ufw
-      command: ufw reload
-
-    - name: Save iptables rules
-      command: iptables-save > /etc/iptables/rules.v4
