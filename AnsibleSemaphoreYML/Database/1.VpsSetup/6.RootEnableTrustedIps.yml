@@ -1,0 +1,26 @@
+- name: Restrict access to MariaDB to trusted IPs
+  hosts: all
+  become: true
+  vars:
+    # Assuming the secrets are named with a pattern like TRUSTED_IP_<NUMBER>
+    # Retrieve all secrets matching this pattern dynamically
+    trusted_ips: "{{ lookup('env', 'TRUSTED_IPS') | split(',') }}"
+
+  tasks:
+    - name: Set default firewall policy to block all incoming connections
+      command: firewall-cmd --zone=public --set-target=DROP
+
+    - name: Allow access for trusted IPs
+      command: firewall-cmd --zone=public --add-source="{{ item }}" --permanent
+      loop: "{{ trusted_ips }}"
+
+    - name: Allow SSH access for trusted IPs
+      command: firewall-cmd --zone=public --add-port=22/tcp --permanent
+
+    - name: Allow MariaDB access for trusted IPs
+      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+
+    - name: Reload firewalld to apply changes
+      service:
+        name: firewalld
+        state: reloaded
