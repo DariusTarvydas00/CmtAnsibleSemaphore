@@ -7,17 +7,25 @@
 
   tasks:
     - name: Create User
-      run:
-        command: |
-          sudo useradd -m -s /bin/bash {{ admin_user_name }}
-          echo "{{ admin_user_name }}:{{ admin_password }}" | sudo chpasswd
+      user:
+        name: "{{ admin_user_name }}"
+        shell: /bin/bash
+        state: present
+        create_home: yes
+
+    - name: Set User Password
+      user:
+        name: "{{ admin_user_name }}"
+        password: "{{ admin_password | password_hash('sha512') }}"
 
     - name: Add Sudo Privileges
-      run:
-        command: |
-          echo "{{ admin_user_name }} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/{{ admin_user_name }}
+      lineinfile:
+        path: /etc/sudoers.d/{{ admin_user_name }}
+        line: "{{ admin_user_name }} ALL=(ALL) NOPASSWD:ALL"
+        create: yes
 
     - name: Set Permissions
-      run:
-        command: |
-          sudo chmod -R u+rw /home/{{ admin_user_name }}
+      file:
+        path: /home/{{ admin_user_name }}
+        mode: u+rw
+        recurse: yes
