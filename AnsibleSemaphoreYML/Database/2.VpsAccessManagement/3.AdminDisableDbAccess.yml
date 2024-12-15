@@ -17,6 +17,7 @@
     - name: Check if port 3306 is closed in firewalld
       command: firewall-cmd --query-port=3306/tcp
       register: port_status
+      failed_when: false  # Ensure the task does not fail if the port is not open
       changed_when: false
 
     - name: Print port status
