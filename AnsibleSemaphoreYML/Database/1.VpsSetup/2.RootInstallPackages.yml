@@ -8,10 +8,6 @@
     # Required for system-level utilities, including sudo, curl, and dependencies for Docker
     system_packages_to_install:
       - sudo                    # Install sudo to allow for privileged operations
-    
-    # DOCKER
-    # Packages and dependencies for Docker installation
-    docker_packages_to_install:
       - apt-transport-https      # Required for Docker to access secure repositories
       - ca-certificates          # To ensure Docker can download over HTTPS
       - curl                     # Curl to fetch Docker's installation script
