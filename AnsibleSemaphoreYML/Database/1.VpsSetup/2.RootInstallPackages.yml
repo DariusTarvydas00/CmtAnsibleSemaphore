@@ -50,10 +50,17 @@
         update_cache: yes  # Ensure package cache is updated
       loop: "{{ docker_package_to_install }}"
 
+    # Create a virtual environment for Python and install packages
+    - name: Create a Python virtual environment
+      command: python3 -m venv /opt/myenv
+      args:
+        creates: /opt/myenv
+
     # Install PIP Packages
     - name: Install Python PIP packages
       pip:
         name: "{{ item }}"
+        virtualenv: /opt/myenv
         state: present
       loop: "{{ pip_packages_to_install }}"
 
