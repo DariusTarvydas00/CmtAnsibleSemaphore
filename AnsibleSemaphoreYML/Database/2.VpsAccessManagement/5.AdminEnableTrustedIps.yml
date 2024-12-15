@@ -7,7 +7,6 @@
     trusted_ips:
       - "{{ lookup('env', 'TRUSTED_IP_1') }}"
       - "{{ lookup('env', 'TRUSTED_IP_2') }}"
-      - "{{ lookup('env', 'TRUSTED_IP_3') }}"
 
   tasks:
     - name: Set default firewall policy to block all incoming connections (permanent)
