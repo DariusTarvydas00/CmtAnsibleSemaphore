@@ -1,11 +1,13 @@
 - name: Set Hostname
   hosts: all
   become: true
+  vars:
+    new_hostname: "database"  # Define the hostname as a variable
 
   tasks:
     - name: Set the hostname
       hostname:
-        name: "database"
+        name: "{{ new_hostname }}"
 
     - name: Ensure the hostname is set correctly (reboot if necessary)
       command: hostnamectl set-hostname "{{ new_hostname }}"
