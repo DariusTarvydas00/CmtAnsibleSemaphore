@@ -10,7 +10,7 @@
 
   tasks:
     - name: Set default firewall policy to block all incoming connections
-      command: firewall-cmd --zone=public --set-target=DROP
+      command: firewall-cmd --zone=public --set-target=DROP --permanent
 
     - name: Allow access for trusted IPs for SSH
       command: firewall-cmd --zone=public --add-source="{{ item }}" --permanent
