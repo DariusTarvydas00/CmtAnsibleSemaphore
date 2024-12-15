@@ -1,0 +1,12 @@
+- name: Set Hostname
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Set the hostname
+      hostname:
+        name: "database"
+
+    - name: Ensure the hostname is set correctly (reboot if necessary)
+      command: hostnamectl set-hostname "{{ new_hostname }}"
+      when: ansible_facts['ansible_hostname'] != new_hostname
