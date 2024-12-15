@@ -1,6 +1,7 @@
 - name: Restrict SSH and MariaDB access to trusted IPs
   hosts: all
   become: true
+  become_user: root  # Explicitly run as root
   vars:
     # Assuming you added the trusted IPs via environment secrets or manually
     trusted_ips:
