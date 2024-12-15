@@ -1,0 +1,19 @@
+# enable_tcp_syn_cookies.yml
+- name: Enable TCP SYN Cookies to protect from SYN flood
+  hosts: all
+  become: true
+  tasks:
+    - name: Enable TCP SYN cookies
+      sysctl:
+        name: net.ipv4.tcp_syncookies
+        value: 1
+        state: present
+        reload: yes
+
+    - name: Make TCP SYN cookies setting persistent across reboots
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "net.ipv4.tcp_syncookies = 1"
+        create: yes
+      notify:
+        - Reload sysctl

@@ -21,6 +21,8 @@
       - virtualenv
       - firewalld                # Firewall manager for Linux
       - ufw                      # Uncomplicated Firewall (UFW) for simpler firewall management
+      - fail2ban
+      - logwatch
 
     # PIP Packages
     pip_packages_to_install:

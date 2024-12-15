@@ -1,0 +1,27 @@
+# fail2ban_setup.yml
+- name: Install and configure Fail2Ban
+  hosts: all
+  become: true
+  tasks:
+    - name: Enable and start Fail2Ban service
+      service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: Configure Fail2Ban for MariaDB
+      copy:
+        dest: /etc/fail2ban/jail.d/mariadb.conf
+        content: |
+          [mariadb]
+          enabled  = true
+          filter   = mariadb-auth
+          action   = iptables[name=Mysql, port=3306, protocol=tcp]
+          logpath  = /var/log/mysql/error.log
+          maxretry = 3
+          bantime  = 600
+
+    - name: Restart Fail2Ban to apply changes
+      service:
+        name: fail2ban
+        state: restarted
