@@ -1,0 +1,30 @@
+- name: Enable access to port 3306 for MariaDB
+  hosts: all
+  become: true
+  become_user: root  # Explicitly become root for all tasks
+  tasks:
+
+    - name: Open port 3306 for MariaDB in firewalld
+      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+      notify:
+        - Reload firewalld
+
+    - name: Reload firewalld to apply changes
+      service:
+        name: firewalld
+        state: reloaded
+
+    - name: Check if port 3306 is open in firewalld
+      command: firewall-cmd --query-port=3306/tcp
+      register: port_status
+      changed_when: false
+
+    - name: Print port status
+      debug:
+        msg: "Port 3306 status: {{ port_status.stdout }}"
+  
+  handlers:
+    - name: Reload firewalld
+      service:
+        name: firewalld
+        state: reloaded
