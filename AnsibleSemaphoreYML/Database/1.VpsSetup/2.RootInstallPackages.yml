@@ -1,7 +1,6 @@
 ---
 - name: Install prerequisites for MariaDB setup, Docker, and Python environment
   hosts: all
-  become: true  # Ensure tasks are run with elevated privileges
 
   vars:
     # APT Packages
