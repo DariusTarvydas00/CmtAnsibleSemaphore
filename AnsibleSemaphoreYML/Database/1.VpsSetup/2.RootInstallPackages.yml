@@ -19,6 +19,8 @@
       - build-essential          # Build tools needed for compiling software like MySqlClient
       - python3-mysqldb          # Python 3 MySQL client library
       - virtualenv
+      - firewalld                # Firewall manager for Linux
+      - ufw                      # Uncomplicated Firewall (UFW) for simpler firewall management
 
     # PIP Packages
     pip_packages_to_install:
