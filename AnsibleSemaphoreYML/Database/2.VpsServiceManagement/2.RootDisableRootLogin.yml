@@ -1,0 +1,23 @@
+- name: Disable Root SSH Access
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Backup current sshd_config
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.bak
+        remote_src: yes
+      when: ansible_facts['distribution'] == 'Ubuntu'  # Add more conditions if needed for specific OS.
+
+    - name: Disable root login in SSH configuration
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted

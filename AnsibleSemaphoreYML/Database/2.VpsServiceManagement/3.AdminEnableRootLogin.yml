@@ -1,0 +1,22 @@
+- name: Enable Root SSH Login
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Backup current sshd_config
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.bak
+        remote_src: yes
+
+    - name: Enable Root Login in SSH configuration
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
