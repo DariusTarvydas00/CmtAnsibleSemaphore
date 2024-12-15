@@ -1,68 +1,66 @@
 ---
-- name: Install prerequisites for MariaDB setup and Docker, Python setup
+- name: Install prerequisites for MariaDB setup, Docker, and Python environment
   hosts: all
   become: true  # Ensure tasks are run with elevated privileges
 
   vars:
-    # SYSTEM PACKAGES
-    # Required for system-level utilities, including sudo, curl, and dependencies for Docker
-    system_packages_to_install:
+    # APT Packages
+    apt_packages_to_install:
       - sudo                    # Install sudo to allow for privileged operations
       - apt-transport-https      # Required for Docker to access secure repositories
       - ca-certificates          # To ensure Docker can download over HTTPS
       - curl                     # Curl to fetch Docker's installation script
       - gnupg2                   # GPG for managing Docker's repository key
       - lsb-release              # To identify the OS version for Docker repository
-    
-    # PYTHON
-    # Packages required for setting up Python, Python virtual environments, and necessary libraries for MariaDB
-    python_to_install:
       - python3-pip              # Python package manager
       - python3-venv             # Required for creating Python virtual environments
       - python3-dev              # Development libraries for Python
       - pkg-config               # Required for building some dependencies (e.g., MySqlClient)
       - libmariadb-dev           # MySQL/MariaDB development libraries
       - build-essential          # Build tools needed for compiling software like MySqlClient
+      - python3-mysqldb          # Python 3 MySQL client library
+
+    # PIP Packages
+    pip_packages_to_install:
       - PyMySQL                  # Python package to interact with MySQL/MariaDB
       - requests                 # Python HTTP library, useful for making network requests
 
-    # MySQL
-    # Install MySQL and related tools
+    # MySQL-related Packages
     mysql_packages_to_install:
       - python3-mysqldb          # Python 3 MySQL client library
 
+    # Docker installation (from Debian repositories)
+    docker_package_to_install:
+      - docker.io                # Docker package from Debian repositories
+
   tasks:
-    # SYSTEM TASKS
-    - name: Install system packages
+    # Install APT Packages
+    - name: Install APT packages
       apt:
         name: "{{ item }}"
         state: present
         update_cache: yes  # Ensure package cache is updated
-      loop: "{{ system_packages_to_install }}"
+      loop: "{{ apt_packages_to_install }}"
     
-    # DOCKER INSTALLATION (from Debian repositories)
+    # Install Docker (from Debian repositories)
     - name: Install Docker (from Debian repositories)
       apt:
-        name: docker.io
+        name: "{{ item }}"
         state: present
         update_cache: yes  # Ensure package cache is updated
-    
-    # PYTHON ENVIRONMENT AND PACKAGES
-    - name: Set up Python environment and install required packages
-      block:
-        - name: Install Python packages (pip, virtualenv, development headers)
-          apt:
-            name: "{{ item }}"
-            state: present
-          loop: "{{ python_to_install }}"
-    
-    # MySQL INSTALLATION
-    - name: Install MySql related packages
-      block:
-        - name: Install MySQL related packages
-          apt:
-            name: "{{ item }}"
-            state: present
-            update_cache: yes  # Ensure package cache is updated
-          loop: "{{ mysql_packages_to_install }}"
-   
+      loop: "{{ docker_package_to_install }}"
+
+    # Install PIP Packages
+    - name: Install Python PIP packages
+      pip:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ pip_packages_to_install }}"
+
+    # Install MySQL-related Packages (MySQL client libraries)
+    - name: Install MySQL-related packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes  # Ensure package cache is updated
+      loop: "{{ mysql_packages_to_install }}"
