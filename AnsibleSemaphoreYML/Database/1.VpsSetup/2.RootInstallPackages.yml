@@ -19,6 +19,7 @@
       - libmariadb-dev           # MySQL/MariaDB development libraries
       - build-essential          # Build tools needed for compiling software like MySqlClient
       - python3-mysqldb          # Python 3 MySQL client library
+      - virtualenv
 
     # PIP Packages
     pip_packages_to_install:
