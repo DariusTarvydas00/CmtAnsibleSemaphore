@@ -1,6 +1,6 @@
 - name: Enable Root SSH Login
   hosts: all
-  become: true
+  become: true  # Ensure that sudo privileges are used for all tasks
 
   tasks:
     - name: Backup current sshd_config

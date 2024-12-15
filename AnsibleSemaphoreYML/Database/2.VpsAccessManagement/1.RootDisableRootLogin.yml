@@ -1,0 +1,32 @@
+- name: Disable Root SSH Access if Admin User Exists
+  hosts: all
+  become: true
+  vars:
+    admin_user_name: "{{ lookup('env', 'ADMIN_USER_NAME') }}"  # Get the admin user name from the environment variable
+
+  tasks:
+    - name: Check if admin user exists
+      command: getent passwd {{ admin_user_name }}
+      register: admin_user_exists
+      ignore_errors: yes
+
+    - name: Backup current sshd_config
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.bak
+        remote_src: yes
+      when: admin_user_exists.rc == 0  # Only backup if the admin user exists
+
+    - name: Disable root login in SSH configuration
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+      when: admin_user_exists.rc == 0  # Only disable root login if the admin user exists
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
+      when: admin_user_exists.rc == 0  # Only restart SSH service if the admin user exists
