@@ -1,8 +1,14 @@
 ---
-- name: Install and Configure Docker
+- name: Check Services
   hosts: all
 
   tasks:
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+        
     - name: Ensure Docker service is running
       service:
         name: docker

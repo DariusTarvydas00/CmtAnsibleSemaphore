@@ -1,0 +1,54 @@
+- name: Check Firewall and MariaDB Port Status
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Check if firewall is active using firewalld
+      command: firewall-cmd --state
+      register: firewalld_status
+      ignore_errors: yes
+
+    - name: Check if firewall is active using ufw
+      command: ufw status
+      register: ufw_status
+      ignore_errors: yes
+
+    - name: Check if firewall is active using iptables
+      command: iptables -L
+      register: iptables_status
+      ignore_errors: yes
+
+    - name: Set firewall active status
+      set_fact:
+        firewall_status: "{{ firewalld_status.stdout if firewalld_status.rc == 0 else (ufw_status.stdout if ufw_status.rc == 0 else iptables_status.stdout) }}"
+
+    - name: Print firewall status
+      debug:
+        msg: "Firewall status: {{ firewall_status }}"
+
+    - name: Check if port 3306 is open in firewall (firewalld)
+      command: firewall-cmd --query-port=3306/tcp
+      register: port_status_firewalld
+      when: firewalld_status.rc == 0
+      ignore_errors: yes
+
+    - name: Check if port 3306 is open in ufw
+      command: ufw status
+      register: port_status_ufw
+      when: ufw_status.rc == 0
+      ignore_errors: yes
+
+    - name: Check if port 3306 is open in iptables
+      command: iptables -L -n
+      register: port_status_iptables
+      when: iptables_status.rc == 0
+      ignore_errors: yes
+
+    - name: Set port status
+      set_fact:
+        port_status: "{{ port_status_firewalld.stdout if port_status_firewalld.rc == 0 else (port_status_ufw.stdout if port_status_ufw.rc == 0 else port_status_iptables.stdout) }}"
+
+    - name: Print port 3306 status
+      debug:
+        msg: "Port 3306 status: {{ port_status }}"
+
