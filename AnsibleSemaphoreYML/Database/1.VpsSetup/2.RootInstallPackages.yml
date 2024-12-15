@@ -70,19 +70,6 @@
             name: "{{ item }}"
             state: present
           loop: "{{ python_to_install }}"
-  
-        - name: Create a Python virtual environment
-          shell: python3 -m venv /opt/myenv
-          args:
-            creates: /opt/myenv/bin/activate  # Prevents recreation if it already exists
-          become: true
-  
-        - name: Install Python packages in the virtual environment
-          pip:
-            name: "{{ item }}"
-            state: present
-            executable: /opt/myenv/bin/pip
-          loop: "{{ python_to_install }}"
     
     # MySQL INSTALLATION
     - name: Install MySql related packages

@@ -1,0 +1,26 @@
+---
+- name: Install prerequisites for MariaDB setup and Docker, Python setup
+  hosts: all
+  become: true  # Ensure tasks are run with elevated privileges
+
+  vars:
+    # PYTHON
+    # Packages required for setting up Python, Python virtual environments, and necessary libraries for MariaDB
+    python_to_install:
+      - python3-pip              # Python package manager
+      - python3-venv             # Required for creating Python virtual environments
+      - python3-dev              # Development libraries for Python
+      - pkg-config               # Required for building some dependencies (e.g., MySqlClient)
+      - libmariadb-dev           # MySQL/MariaDB development libraries
+      - build-essential          # Build tools needed for compiling software like MySqlClient
+      - PyMySQL                  # Python package to interact with MySQL/MariaDB
+      - requests                 # Python HTTP library, useful for making network requests
+
+  tasks:
+    # PYTHON ENVIRONMENT AND PACKAGES
+    - name: Install Python packages in the virtual environment
+      pip:
+        name: "{{ item }}"
+        state: present
+        executable: /opt/myenv/bin/pip
+      loop: "{{ python_to_install }}"
