@@ -17,6 +17,7 @@
       - curl                     # Curl to fetch Docker's installation script
       - gnupg2                   # GPG for managing Docker's repository key
       - lsb-release              # To identify the OS version for Docker repository
+      - gnupg
     
     # PYTHON
     # Packages required for setting up Python, Python virtual environments, and necessary libraries for MariaDB
