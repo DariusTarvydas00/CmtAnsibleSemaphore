@@ -15,6 +15,7 @@
     - name: Allow access for trusted IPs for SSH
       command: firewall-cmd --zone=public --add-source="{{ item }}" --permanent
       loop: "{{ trusted_ips }}"
+      when: item != ''
 
     - name: Allow access for trusted IPs for MariaDB
       command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
