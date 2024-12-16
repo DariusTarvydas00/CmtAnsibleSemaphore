@@ -1,0 +1,65 @@
+---
+- name: Secure MariaDB installation
+  hosts: all
+  become: true
+
+  vars:
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"  # Ensure this is set in your environment or Ansible vars
+
+  tasks:
+    # Set root password if not already set
+    - name: Set the root password if not already set
+      mysql_user:
+        name: root
+        password: "{{ mariadb_root_password }}"
+        host: localhost
+        state: present
+      when: mariadb_root_password is defined
+
+    # Remove anonymous users
+    - name: Remove anonymous users
+      mysql_user:
+        name: ""
+        host: "%"
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true  # In case there are no anonymous users
+
+    # Disallow remote root login
+    - name: Disallow root login from remote hosts
+      mysql_user:
+        name: root
+        host: "%"
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true  # In case the root user is not allowed remote login
+
+    # Remove the test database
+    - name: Remove test database
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true  # In case the test database is already removed
+
+    # Remove test database users
+    - name: Remove test users
+      mysql_user:
+        name: ""
+        host: "%"
+        db: "test"
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true  # In case there are no test users
+
+    # Reload privilege tables to ensure changes take effect
+    - name: Reload privilege tables
+      mysql_db:
+        name: ""
+        state: reload
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
