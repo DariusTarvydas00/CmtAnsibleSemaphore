@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"  # Ensure this is set in your environment or Ansible vars
+    mariadb_root_password: "{{ lookup('env', '') }}"  # Ensure this is set in your environment or Ansible vars
 
   tasks:
     # Set root password if not already set
