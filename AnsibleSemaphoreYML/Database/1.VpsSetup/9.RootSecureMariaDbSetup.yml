@@ -1,13 +1,35 @@
 ---
-- name: Secure MariaDB installation
+- name: Configure and secure MariaDB
   hosts: all
   become: true
 
   vars:
-    mariadb_root_password: "{{ lookup('env', '') }}"  # Ensure this is set in your environment or Ansible vars
-
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
+    mariadb_bind_address: "127.0.0.1"  # Default bind address
+    mariadb_admin_username: "{{ lookup('env', 'MARIADB_ADMIN_USERNAME') }}"
+    mariadb_admin_password: "{{ lookup('env', 'MARIADB_ADMIN_PASSWORD') }}"
+    mariadb_cmt_server_username: "{{ lookup('env', 'MARIADB_CMT_SERVER_USERNAME') }}"
+    mariadb_cmt_server_password: "{{ lookup('env', 'MARIADB_CMT_SERVER_PASSWORD') }}"
+    
+    mariadb_databases:
+      - name: "cmt_database"
+      - name: "Accounts"
+      - name: "Authentication"
+      - name: "CabalCash"
+      - name: "CabalGuild"
+      - name: "EventData"
+      - name: "Netcafebilling"
+      - name: "Server01"
+  
   tasks:
-    # Set root password if not already set
+    # Ensure MariaDB service is started
+    - name: Start and enable MariaDB service
+      systemd:
+        name: mariadb
+        state: started
+        enabled: true
+
+    # Set the root password if not already set
     - name: Set the root password if not already set
       mysql_user:
         name: root
@@ -63,3 +85,50 @@
         state: reload
         login_user: root
         login_password: "{{ mariadb_root_password }}"
+
+    # Configure MariaDB bind address
+    - name: Configure MariaDB bind address
+      lineinfile:
+        path: /etc/mysql/mariadb.conf.d/50-server.cnf
+        regexp: '^bind-address'
+        line: "bind-address = {{ mariadb_bind_address }}"
+        create: yes
+        backup: yes
+      notify: Restart MariaDB service
+
+    # Create databases
+    - name: Create databases
+      mysql_db:
+        name: "{{ item.name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      loop: "{{ mariadb_databases }}"
+
+    # Create an admin user and grant all privileges
+    - name: Create an admin user and grant privileges
+      mysql_user:
+        name: "{{ mariadb_admin_username }}"
+        password: "{{ mariadb_admin_password }}"
+        priv: "*.*:ALL"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+    
+    # Create a cmt server user and grant database-specific privileges
+    - name: Create a cmt server user and grant privileges
+      mysql_user:
+        name: "{{ mariadb_cmt_server_username }}"
+        password: "{{ mariadb_cmt_server_password }}"
+        priv: "{{ item.name }}.*:SELECT,INSERT,UPDATE,DELETE"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      loop: "{{ mariadb_databases }}"
+      when: item.name != "cmt_database"  # Exclude cmt_database from cmt server user privileges
+
+  handlers:
+    - name: Restart MariaDB service
+      systemd:
+        name: mariadb
+        state: restarted
