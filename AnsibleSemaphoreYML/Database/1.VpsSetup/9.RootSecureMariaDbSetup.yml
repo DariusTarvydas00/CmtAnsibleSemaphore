@@ -5,7 +5,7 @@
 
   vars:
     mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
-    mariadb_bind_address: "127.0.0.1"  # Default bind address
+    mariadb_bind_address: "0.0.0.0"  # Default bind address
     mariadb_admin_username: "{{ lookup('env', 'MARIADB_ADMIN_USERNAME') }}"
     mariadb_admin_password: "{{ lookup('env', 'MARIADB_ADMIN_PASSWORD') }}"
     mariadb_cmt_server_username: "{{ lookup('env', 'MARIADB_CMT_SERVER_USERNAME') }}"

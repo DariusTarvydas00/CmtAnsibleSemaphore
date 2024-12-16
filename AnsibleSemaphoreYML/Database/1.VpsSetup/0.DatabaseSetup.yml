@@ -1,0 +1,216 @@
+---
+- name: Setup and Secure MariaDB, Install Prerequisites, and Configure Security
+  hosts: all
+  become: true
+
+  vars:
+    # MariaDB configuration and user credentials
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
+    mariadb_admin_username: "{{ lookup('env', 'MARIADB_ADMIN_USERNAME') }}"
+    mariadb_admin_password: "{{ lookup('env', 'MARIADB_ADMIN_PASSWORD') }}"
+    mariadb_cmt_server_username: "{{ lookup('env', 'MARIADB_CMT_SERVER_USERNAME') }}"
+    mariadb_cmt_server_password: "{{ lookup('env', 'MARIADB_CMT_SERVER_PASSWORD') }}"
+    mariadb_bind_address: "0.0.0.0"  # Default bind address for MariaDB
+
+    # List of MariaDB databases to create
+    mariadb_databases:
+      - name: "cmt_database"
+      - name: "Accounts"
+      - name: "Authentication"
+      - name: "CabalCash"
+      - name: "CabalGuild"
+      - name: "EventData"
+      - name: "Netcafebilling"
+      - name: "Server01"
+
+    # Packages for MariaDB, Firewall, Fail2Ban, and Python environment
+    apt_packages_to_install:
+      - mariadb-server            # MariaDB server package
+      - mariadb-client            # MariaDB client package
+      - libmariadb-dev            # Development libraries for MariaDB
+      - firewalld                 # Firewall management tool
+      - fail2ban                  # Fail2Ban service for security
+      - sudo                      # Sudo for privileged operations
+      - python3-pip               # Python package manager
+      - python3-venv              # Python virtual environment package
+      - python3-mysqldb           # Python MySQL client library
+
+    # PIP Packages for Python environment
+    pip_packages_to_install:
+      - PyMySQL                   # Python MySQL client
+      - requests                  # Python HTTP library
+
+    # Security configuration
+    firewall_port: 3306  # Port for MariaDB
+    new_hostname: "database"  # Set the desired hostname
+
+  tasks:
+
+    # Install required APT packages
+    - name: Install APT packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop: "{{ apt_packages_to_install }}"
+
+    # Create a Python virtual environment and install packages
+    - name: Create a Python virtual environment
+      command: python3 -m venv /opt/myenv
+      args:
+        creates: /opt/myenv
+
+    - name: Install Python PIP packages
+      pip:
+        name: "{{ item }}"
+        virtualenv: /opt/myenv
+        state: present
+      loop: "{{ pip_packages_to_install }}"
+
+    # Set up system firewall to open port 3306 for MariaDB
+    - name: Install and start firewalld
+      package:
+        name: firewalld
+        state: present
+    - name: Open port 3306 for MariaDB
+      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+    - name: Reload firewalld
+      service:
+        name: firewalld
+        state: reloaded
+
+    # Configure Fail2Ban for MariaDB
+    - name: Install and configure Fail2Ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: true
+    - name: Configure Fail2Ban for MariaDB
+      copy:
+        dest: /etc/fail2ban/jail.d/mariadb.conf
+        content: |
+          [mariadb]
+          enabled  = true
+          filter   = mariadb-auth
+          action   = iptables[name=Mysql, port=3306, protocol=tcp]
+          logpath  = /var/log/mysql/error.log
+          maxretry = 3
+          bantime  = 600
+    - name: Restart Fail2Ban
+      service:
+        name: fail2ban
+        state: restarted
+
+    # Configure TCP SYN cookies for additional security
+    - name: Enable TCP SYN Cookies
+      sysctl:
+        name: net.ipv4.tcp_syncookies
+        value: 1
+        state: present
+        reload: yes
+    - name: Make TCP SYN Cookies persistent
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "net.ipv4.tcp_syncookies = 1"
+        create: yes
+
+    # Set the hostname
+    - name: Set hostname
+      hostname:
+        name: "{{ new_hostname }}"
+
+    # Ensure the hostname persists across reboots
+    - name: Set the hostname with hostnamectl
+      command: hostnamectl set-hostname "{{ new_hostname }}"
+      when: ansible_facts['hostname'] != new_hostname
+
+    # Ensure MariaDB service is started and configured
+    - name: Ensure MariaDB service is started
+      systemd:
+        name: mariadb
+        state: started
+        enabled: true
+
+    # Set the root password for MariaDB
+    - name: Set root password for MariaDB
+      mysql_user:
+        name: root
+        password: "{{ mariadb_root_password }}"
+        host: localhost
+        state: present
+
+    # Remove anonymous users from MariaDB
+    - name: Remove anonymous users from MariaDB
+      mysql_user:
+        name: ""
+        host: "%"
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true
+
+    # Remove test database from MariaDB
+    - name: Remove test database from MariaDB
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      ignore_errors: true
+
+    # Reload MariaDB privilege tables
+    - name: Reload privilege tables for MariaDB
+      mysql_user:
+        name: root
+        host: localhost
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+        state: present
+        update_password: on_create
+
+    # Configure MariaDB bind address
+    - name: Configure MariaDB bind address
+      lineinfile:
+        path: /etc/mysql/mariadb.conf.d/50-server.cnf
+        regexp: '^bind-address'
+        line: "bind-address = {{ mariadb_bind_address }}"
+        create: yes
+        backup: yes
+      notify: Restart MariaDB
+
+    # Create required databases
+    - name: Create databases for MariaDB
+      mysql_db:
+        name: "{{ item.name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      loop: "{{ mariadb_databases }}"
+
+    # Create and configure admin user
+    - name: Create admin user for MariaDB
+      mysql_user:
+        name: "{{ mariadb_admin_username }}"
+        password: "{{ mariadb_admin_password }}"
+        priv: "*.*:ALL"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+
+    # Create CMT server user with database-specific privileges
+    - name: Create CMT server user and grant privileges
+      mysql_user:
+        name: "{{ mariadb_cmt_server_username }}"
+        password: "{{ mariadb_cmt_server_password }}"
+        priv: "{{ item.name }}.*:SELECT,INSERT,UPDATE,DELETE"
+        state: present
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+      loop: "{{ mariadb_databases }}"
+      when: item.name != "cmt_database"  # Exclude cmt_database for this user
+
+  handlers:
+    - name: Restart MariaDB
+      systemd:
+        name: mariadb
+        state: restarted
