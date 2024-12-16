@@ -33,10 +33,6 @@
     mysql_packages_to_install:
       - python3-mysqldb          # Python 3 MySQL client library
 
-    # Docker installation (from Debian repositories)
-    docker_package_to_install:
-      - docker.io                # Docker package from Debian repositories
-
   tasks:
     # Install APT Packages
     - name: Install APT packages
@@ -45,14 +41,6 @@
         state: present
         update_cache: yes  # Ensure package cache is updated
       loop: "{{ apt_packages_to_install }}"
-    
-    # Install Docker (from Debian repositories)
-    - name: Install Docker (from Debian repositories)
-      apt:
-        name: "{{ item }}"
-        state: present
-        update_cache: yes  # Ensure package cache is updated
-      loop: "{{ docker_package_to_install }}"
 
     # Create a virtual environment for Python and install packages
     - name: Create a Python virtual environment
