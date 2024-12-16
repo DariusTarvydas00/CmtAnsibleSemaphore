@@ -49,15 +49,15 @@
         backup: yes
       notify: Restart MariaDB service
 
-    # Restrict root access to localhost
-    - name: Restrict root access to localhost
-      mysql_user:
-        name: root
-        host: "%"
-        state: absent
-        login_user: root
-        login_password: "{{ mariadb_root_password }}"
-      ignore_errors: true  # In case it's already restricted
+#    # Restrict root access to localhost
+#    - name: Restrict root access to localhost
+#      mysql_user:
+#        name: root
+#        host: "%"
+#        state: absent
+#        login_user: root
+#        login_password: "{{ mariadb_root_password }}"
+#      ignore_errors: true  # In case it's already restricted
 
     # Create databases
     - name: Create databases
