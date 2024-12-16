@@ -48,15 +48,15 @@
         login_password: "{{ mariadb_root_password }}"
       ignore_errors: true  # In case there are no anonymous users
 
-    # Disallow remote root login
-    - name: Disallow root login from remote hosts
-      mysql_user:
-        name: root
-        host: "%"
-        state: absent
-        login_user: root
-        login_password: "{{ mariadb_root_password }}"
-      ignore_errors: true  # In case the root user is not allowed remote login
+#    # Disallow remote root login
+#    - name: Disallow root login from remote hosts
+#      mysql_user:
+#        name: root
+#        host: "%"
+#        state: absent
+#        login_user: root
+#        login_password: "{{ mariadb_root_password }}"
+#      ignore_errors: true  # In case the root user is not allowed remote login
 
     # Remove the test database
     - name: Remove test database
