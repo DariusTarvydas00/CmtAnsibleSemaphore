@@ -193,6 +193,7 @@
         name: "{{ mariadb_admin_username }}"
         password: "{{ mariadb_admin_password }}"
         priv: "*.*:ALL"
+        host: "%"
         state: present
         login_user: root
         login_password: "{{ mariadb_root_password }}"
