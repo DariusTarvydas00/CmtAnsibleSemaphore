@@ -67,24 +67,22 @@
         login_password: "{{ mariadb_root_password }}"
       ignore_errors: true  # In case the test database is already removed
 
-    # Remove test database users
-    - name: Remove test users
-      mysql_user:
-        name: ""
-        host: "%"
-        db: "test"
-        state: absent
-        login_user: root
-        login_password: "{{ mariadb_root_password }}"
-      ignore_errors: true  # In case there are no test users
+    # Remove test users using a shell command
+    - name: Remove test users from mysql.user table
+      shell: |
+        mysql -u root -p{{ mariadb_root_password }} -e "DELETE FROM mysql.user WHERE user='';"
+      ignore_errors: true  # In case there are no test users to delete
 
-    # Reload privilege tables to ensure changes take effect
+    # Reload privilege tables
     - name: Reload privilege tables
-      mysql_db:
-        name: ""
-        state: reload
+      mysql_user:
+        name: root
+        host: localhost
         login_user: root
         login_password: "{{ mariadb_root_password }}"
+        state: present
+        update_password: on_create
+      ignore_errors: true  # In case reload fails, it won't halt the playbook
 
     # Configure MariaDB bind address
     - name: Configure MariaDB bind address
