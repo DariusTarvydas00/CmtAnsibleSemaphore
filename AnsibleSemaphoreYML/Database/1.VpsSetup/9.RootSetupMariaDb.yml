@@ -38,8 +38,6 @@
         mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
         mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mariadb_root_password }}';"
         mysql -e "FLUSH PRIVILEGES;"
-      args:
-        warn: false
 
     # Configure MariaDB to listen only on specified IP
     - name: Configure MariaDB bind address
