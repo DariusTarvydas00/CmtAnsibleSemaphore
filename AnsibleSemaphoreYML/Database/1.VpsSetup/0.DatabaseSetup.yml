@@ -43,9 +43,22 @@
     # Security configuration
     firewall_port: 3306  # Port for MariaDB
     new_hostname: "database"  # Set the desired hostname
+    vps_username: "{{ lookup('env', 'VPS_ADMIN_USERNAME') }}"  # Username for the VPS user
+    vps_password: "{{ lookup('env', 'VPS_ADMIN_PASSWORD') }}"  # Password for the VPS user
 
   tasks:
 
+    # Update APT package cache
+    - name: Update APT package cache
+      apt:
+        update_cache: yes
+
+    # Upgrade all installed packages
+    - name: Upgrade APT packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+    
     # Install required APT packages
     - name: Install APT packages
       apt:
@@ -67,6 +80,32 @@
         state: present
       loop: "{{ pip_packages_to_install }}"
 
+    # Create VPS user
+    - name: Create VPS user
+      user:
+        name: "{{ vps_username }}"
+        password: "{{ vps_password | password_hash('sha512') }}"  # You can store the password securely in vault
+        shell: /bin/bash
+        state: present
+        groups: sudo  # Add to 'sudo' group if needed
+
+    # Set up SSH for VPS user
+    - name: Ensure .ssh directory exists for VPS user
+      file:
+        path: "/home/{{ vps_username }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ vps_username }}"
+        group: "{{ vps_username }}"
+        
+    # Add Sudo Privileges for VPS User
+    - name: Add Sudo Privileges
+      lineinfile:
+        path: /etc/sudoers.d/{{ vps_username }}
+        line: "{{ vps_username }} ALL=(ALL) NOPASSWD:ALL"
+        create: yes
+        validate: '/usr/sbin/visudo -cf %s'
+
     # Set up system firewall to open port 3306 for MariaDB
     - name: Install and start firewalld
       package:
@@ -74,6 +113,8 @@
         state: present
     - name: Open port 3306 for MariaDB
       command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+    - name: Open port 22 for SSH
+      command: firewall-cmd --zone=public --add-port=22/tcp --permanent
     - name: Reload firewalld
       service:
         name: firewalld
@@ -205,6 +246,7 @@
         password: "{{ mariadb_cmt_server_password }}"
         priv: "{{ item.name }}.*:SELECT,INSERT,UPDATE,DELETE"
         state: present
+        host: "%"
         login_user: root
         login_password: "{{ mariadb_root_password }}"
       loop: "{{ mariadb_databases }}"
