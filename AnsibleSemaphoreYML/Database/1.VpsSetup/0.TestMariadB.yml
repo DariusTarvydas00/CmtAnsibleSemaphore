@@ -48,8 +48,11 @@
           - software-properties-common
         state: present
 
+    - name: Download Microsoft SQL Server GPG key
+      command: curl https://packages.microsoft.com/keys/microsoft.asc -o /tmp/microsoft.asc
+
     - name: Add Microsoft SQL Server GPG key
-      command: curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+      command: apt-key add /tmp/microsoft.asc
 
     - name: Add Microsoft SQL Server APT repository
       command: add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/debian/11/prod $(lsb_release -cs) main"
