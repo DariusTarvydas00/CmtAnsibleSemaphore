@@ -9,7 +9,7 @@
     mssql_sa_password: "{{ lookup('env', 'SA_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
     mssql_data_volume: "mssql-data"
     mssql_port: 1433
-    docker_context: "/semaphore/repository/your_project_folder"  # Adjust this to the correct path
+    docker_context: "/semaphore/repository/database_project"  # Update this path to the actual location of your project files
 
   tasks:
     # Step 1: Install Docker and Docker Compose
@@ -42,7 +42,7 @@
     - name: Build Docker Image
       command: docker build -t "{{ mssql_image_name }}" .
       args:
-        chdir: "{{ docker_context }}"  # Ensure we are in the correct directory for the build context
+        chdir: "{{ docker_context }}"  # Make sure the build context is correct
 
     # Step 4: Run the Docker container
     - name: Run Docker Container
