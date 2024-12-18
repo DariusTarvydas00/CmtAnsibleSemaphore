@@ -1,69 +1,109 @@
 ---
-- name: Minimal MariaDB Setup with Docker
+- name: Configure server for Semaphore UI with Microsoft SQL Server
   hosts: all
   become: true
 
-  vars:
-    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') | default('rootpassword', true) }}"
-    mariadb_container_name: "mariadb"
-    mariadb_docker_image: "mariadb:latest"
-    mariadb_data_dir: "/srv/mariadb_data"
-    mariadb_port: 3306
-
   tasks:
-    # Ensure Docker is installed
-    - name: Install Docker
-      apt:
-        name:
-          - docker.io
+    # 1. Ensure firewalld is active and running
+    - name: Ensure firewalld is installed
+      package:
+        name: firewalld
         state: present
-        update_cache: yes
 
-    - name: Start and enable Docker service
-      systemd:
-        name: docker
+    - name: Ensure firewalld is started and enabled
+      service:
+        name: firewalld
         state: started
         enabled: true
 
-    # Create a directory for MariaDB data persistence
-    - name: Create MariaDB data directory
+    # 2. Update, upgrade, and clean up packages
+    - name: Update all packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Clean up unused packages
+      apt:
+        autoremove: yes
+        autoclean: yes
+
+    # 3. Open only ports for MariaDB (3306) and SSH (22)
+    - name: Open port 3306 for MariaDB
+      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+
+    - name: Open port 22 for SSH
+      command: firewall-cmd --zone=public --add-port=22/tcp --permanent
+
+    - name: Reload firewalld
+      service:
+        name: firewalld
+        state: reloaded
+
+    # 4. Install Microsoft SQL Server 2022
+    - name: Install required dependencies for Microsoft SQL Server
+      apt:
+        name:
+          - curl
+          - apt-transport-https
+          - software-properties-common
+        state: present
+
+    - name: Add Microsoft SQL Server 2022 repository
+      command: curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+
+    - name: Add Microsoft SQL Server APT repository
+      command: add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/debian/11/prod $(lsb_release -cs) main"
+
+    - name: Install Microsoft SQL Server 2022
+      apt:
+        name: mssql-server
+        state: present
+
+    # 5. Run mssql-conf setup
+    - name: Setup Microsoft SQL Server
+      command: /opt/mssql/bin/mssql-conf setup
+      args:
+        creates: /var/opt/mssql/mssql.conf
+
+    # 6. Ensure that mssql-server is running
+    - name: Ensure mssql-server service is running
+      service:
+        name: mssql-server
+        state: started
+        enabled: true
+
+    # 7. Create a directory for backups
+    - name: Create backup directory for SQL Server
       file:
-        path: "{{ mariadb_data_dir }}"
+        path: /var/opt/mssql/backup
         state: directory
-        owner: root
-        group: root
         mode: '0755'
 
-    # Deploy MariaDB container
-    - name: Deploy MariaDB Docker container
-      docker_container:
-        name: "{{ mariadb_container_name }}"
-        image: "{{ mariadb_docker_image }}"
-        state: started
-        restart_policy: always
-        env:
-          MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-        volumes:
-          - "{{ mariadb_data_dir }}:/var/lib/mysql"
-        ports:
-          - "{{ mariadb_port }}:3306"
+    # 8. Create SQL databases
+    - name: Create databases on SQL Server
+      mssql_db:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - Account
+        - Authentication
+        - CabalCash
+        - CabalGuild
+        - EventData
+        - NetcafeBilling
+        - Server01
+        - cabalmanager
+        - cmt_database
 
-    # Allow remote connections by setting the bind address to 0.0.0.0
-    - name: Configure MariaDB bind address
-      shell: >
-        docker exec -i {{ mariadb_container_name }}
-        bash -c "echo '[mysqld]\nbind-address=0.0.0.0' > /etc/mysql/conf.d/custom.cnf"
-      notify:
-        - Stop MariaDB container
-        - Start MariaDB container
+    # 9. Configure backup locations (optional: backup location configuration is done in SQL Server itself)
+    - name: Set backup location
+      command: |
+        echo "Backups are configured in SQL Server by default to be in /var/opt/mssql/backup."
+      # This is for informational purposes since backup locations are set within the SQL Server configuration
 
-  handlers:
-    - name: Stop MariaDB container
-      docker_container:
-        name: "{{ mariadb_container_name }}"
-        state: stopped
+    # 10. Restart mssql-server to apply changes
+    - name: Restart mssql-server service
+      service:
+        name: mssql-server
+        state: restarted
 
-    - name: Start MariaDB container
-      docker_container:
-        name: "{{ mariadb_container_name }}"
-        state: started
