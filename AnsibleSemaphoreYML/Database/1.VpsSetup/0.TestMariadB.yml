@@ -27,9 +27,9 @@
         autoremove: yes
         autoclean: yes
 
-    # 3. Open only ports for MariaDB (3306) and SSH (22)
-    - name: Open port 3306 for MariaDB
-      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+    # 3. Open only ports for MySql (1433) and SSH (22)
+    - name: Open port 1433 for MySql
+      command: firewall-cmd --zone=public --add-port=1433/tcp --permanent
 
     - name: Open port 22 for SSH
       command: firewall-cmd --zone=public --add-port=22/tcp --permanent
