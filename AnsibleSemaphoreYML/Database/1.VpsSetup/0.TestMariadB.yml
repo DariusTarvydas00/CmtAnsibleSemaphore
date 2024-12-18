@@ -1,53 +1,58 @@
-version: v1.0
+---
+- name: Run MSSQL Docker in Semaphore
+  hosts: all
+  become: true
 
-name: Run MSSQL Docker in Semaphore
+  vars:
+    mssql_image_name: "mssql-server-image"
+    mssql_container_name: "mssql-server-container"
+    mssql_sa_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
+    mssql_data_volume: "mssql-data"
+    mssql_port: 1433
 
-# Define your Docker image and pipeline settings
-docker:
-  version: '19.03'  # Define the Docker version to use
+  tasks:
+    # Step 1: Install Docker and Docker Compose
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+        update_cache: yes
 
-# Define the pipeline's steps
-jobs:
-  build_and_run:
-    name: Build and Run MSSQL Docker
-    docker:
-      - image: "docker:19.03.12"  # Docker image used to run the job
-        context: /workspace        # Workspace context for Docker commands
-    steps:
-      - checkout  # Checkout your code (this fetches the Git repository)
-      
-      # Step 1: Install Docker Compose (if not available)
-      - run:
-          name: Install Docker Compose
-          command: |
-            curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            chmod +x /usr/local/bin/docker-compose
-            docker-compose --version
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: true
 
-      # Step 2: Build the Docker image manually
-      - run:
-          name: Build Docker Image
-          command: |
-            docker build -t mssql-server-image .  # Build Docker image from Dockerfile
+    # Step 2: Build the Docker image
+    - name: Build Docker Image
+      command: docker build -t "{{ mssql_image_name }}" .
+      args:
+        chdir: "/workspace"  # Ensure that the context is correct
 
-      # Step 3: Run the container using the built image
-      - run:
-          name: Run Docker Container
-          command: |
-            docker run -d -p 1433:1433 --name mssql-server-container \
-            -e ACCEPT_EULA=Y \
-            -e SA_PASSWORD=${SA_PASSWORD} \
-            -v mssql-data:/var/opt/mssql \
-            mssql-server-image  # Run the container in detached mode
+    # Step 3: Run the Docker container
+    - name: Run Docker Container
+      docker_container:
+        name: "{{ mssql_container_name }}"
+        image: "{{ mssql_image_name }}"
+        state: started
+        restart_policy: always
+        exposed_ports:
+          - "{{ mssql_port }}"
+        env:
+          ACCEPT_EULA: "Y"
+          SA_PASSWORD: "{{ mssql_sa_password }}"
+        volumes:
+          - "{{ mssql_data_volume }}:/var/opt/mssql"
 
-      # Optional: Step 4: Verify the container is running
-      - run:
-          name: Verify Running Container
-          command: |
-            docker ps  # List running containers to confirm it is up
+    # Step 4: Verify that the container is running
+    - name: Verify running Docker container
+      command: docker ps -f "name={{ mssql_container_name }}"
+      register: container_status
+      failed_when: container_status.stdout == ""
 
-# Optional: Define a notification when the pipeline finishes
-notify:
-  email:
-    recipients:
-      - your_email@example.com
+    - name: Display running container status
+      debug:
+        msg: "Container {{ mssql_container_name }} is running successfully."
