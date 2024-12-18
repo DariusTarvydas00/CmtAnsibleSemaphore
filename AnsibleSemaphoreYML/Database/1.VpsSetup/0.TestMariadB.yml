@@ -1,0 +1,62 @@
+---
+- name: Minimal MariaDB Setup with Docker
+  hosts: all
+  become: true
+
+  vars:
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') | default('rootpassword', true) }}"
+    mariadb_container_name: "mariadb"
+    mariadb_docker_image: "mariadb:latest"
+    mariadb_data_dir: "/srv/mariadb_data"
+    mariadb_port: 3306
+
+  tasks:
+    # Ensure Docker is installed
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # Create a directory for MariaDB data persistence
+    - name: Create MariaDB data directory
+      file:
+        path: "{{ mariadb_data_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    # Deploy MariaDB container
+    - name: Deploy MariaDB Docker container
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        image: "{{ mariadb_docker_image }}"
+        state: started
+        restart_policy: always
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+        volumes:
+          - "{{ mariadb_data_dir }}:/var/lib/mysql"
+        ports:
+          - "{{ mariadb_port }}:3306"
+
+    # Allow remote connections by setting the bind address to 0.0.0.0
+    - name: Configure MariaDB bind address
+      command: >
+        docker exec -i {{ mariadb_container_name }}
+        bash -c "echo '[mysqld]\nbind-address=0.0.0.0' > /etc/mysql/conf.d/custom.cnf && mysqladmin -uroot -p{{ mariadb_root_password }} shutdown"
+      notify: Restart MariaDB
+
+  handlers:
+    - name: Restart MariaDB
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        state: restarted

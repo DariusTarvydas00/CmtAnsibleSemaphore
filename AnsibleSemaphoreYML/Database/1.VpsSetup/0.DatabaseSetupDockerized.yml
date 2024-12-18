@@ -1,0 +1,119 @@
+---
+- name: Setup MariaDB with Docker and Configure Security
+  hosts: all
+  become: true
+
+  vars:
+    # Docker MariaDB configuration
+    mariadb_root_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"
+    mariadb_admin_username: "{{ lookup('env', 'MARIADB_ADMIN_USERNAME') }}"
+    mariadb_admin_password: "{{ lookup('env', 'MARIADB_ADMIN_PASSWORD') }}"
+    mariadb_cmt_server_username: "{{ lookup('env', 'MARIADB_CMT_SERVER_USERNAME') }}"
+    mariadb_cmt_server_password: "{{ lookup('env', 'MARIADB_CMT_SERVER_PASSWORD') }}"
+    mariadb_bind_address: "0.0.0.0"  # Default bind address for MariaDB
+
+    # List of MariaDB databases to create
+    mariadb_databases:
+      - name: "cmt_database"
+      - name: "Accounts"
+      - name: "Authentication"
+      - name: "CabalCash"
+      - name: "CabalGuild"
+      - name: "EventData"
+      - name: "Netcafebilling"
+      - name: "Server01"
+
+    # Docker configuration
+    mariadb_container_name: "mariadb"
+    mariadb_docker_image: "mariadb:latest"
+    mariadb_data_dir: "/srv/mariadb_data"
+    docker_network_name: "mariadb_network"
+
+  tasks:
+    # Ensure Docker is installed
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # Create a Docker network
+    - name: Create Docker network
+      docker_network:
+        name: "{{ docker_network_name }}"
+        driver: bridge
+
+    # Create a directory for MariaDB data persistence
+    - name: Create MariaDB data directory
+      file:
+        path: "{{ mariadb_data_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    # Deploy MariaDB container
+    - name: Deploy MariaDB Docker container
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        image: "{{ mariadb_docker_image }}"
+        state: started
+        restart_policy: always
+        network_mode: "{{ docker_network_name }}"
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+        volumes:
+          - "{{ mariadb_data_dir }}:/var/lib/mysql"
+        ports:
+          - "3306:3306"
+
+    # Wait for MariaDB to become available
+    - name: Wait for MariaDB container to be ready
+      wait_for:
+        host: 127.0.0.1
+        port: 3306
+        state: started
+        delay: 10
+        timeout: 30
+
+    # Create required databases
+    - name: Create databases in MariaDB
+      command: >
+        docker exec -i {{ mariadb_container_name }} mysql -uroot -p{{ mariadb_root_password }} -e "CREATE DATABASE IF NOT EXISTS {{ item.name }};"
+      loop: "{{ mariadb_databases }}"
+
+    # Create admin user for MariaDB
+    - name: Create admin user in MariaDB
+      command: >
+        docker exec -i {{ mariadb_container_name }} mysql -uroot -p{{ mariadb_root_password }} -e
+        "CREATE USER IF NOT EXISTS '{{ mariadb_admin_username }}'@'%' IDENTIFIED BY '{{ mariadb_admin_password }}';
+         GRANT ALL PRIVILEGES ON *.* TO '{{ mariadb_admin_username }}'@'%'; FLUSH PRIVILEGES;"
+
+    # Create CMT server user with specific privileges
+    - name: Create CMT server user and assign privileges
+      command: >
+        docker exec -i {{ mariadb_container_name }} mysql -uroot -p{{ mariadb_root_password }} -e
+        "CREATE USER IF NOT EXISTS '{{ mariadb_cmt_server_username }}'@'%' IDENTIFIED BY '{{ mariadb_cmt_server_password }}';
+         GRANT SELECT, INSERT, UPDATE, DELETE ON {{ item.name }}.* TO '{{ mariadb_cmt_server_username }}'@'%'; FLUSH PRIVILEGES;"
+      loop: "{{ mariadb_databases }}"
+      when: item.name != "cmt_database"  # Exclude cmt_database for this user
+
+    # Configure MariaDB bind address
+    - name: Configure MariaDB bind address
+      command: >
+        docker exec -i {{ mariadb_container_name }} bash -c "echo '[mysqld]\nbind-address={{ mariadb_bind_address }}' >> /etc/mysql/conf.d/custom.cnf && mysqladmin -uroot -p{{ mariadb_root_password }} shutdown"
+      notify: Restart MariaDB
+
+  handlers:
+    - name: Restart MariaDB
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        state: restarted
