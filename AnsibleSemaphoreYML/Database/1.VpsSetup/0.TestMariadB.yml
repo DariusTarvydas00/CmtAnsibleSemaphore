@@ -6,9 +6,9 @@
   vars:
     mssql_image_name: "mcr.microsoft.com/mssql/server:2022-latest"  # Pre-built MSSQL image from Microsoft
     mssql_container_name: "mssql-server-container"
-    mssql_sa_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
+    mssql_sa_password: "{{ lookup('env', 'SA_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
     mssql_data_volume: "mssql-data"
-    mssql_port: 1433
+    mssql_port: 1433  # Update if necessary (for example, 1434 if 1433 is blocked)
 
   tasks:
     # Step 1: Install Docker
