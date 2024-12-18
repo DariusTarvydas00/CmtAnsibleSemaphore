@@ -50,9 +50,9 @@
 
     # Allow remote connections by setting the bind address to 0.0.0.0
     - name: Configure MariaDB bind address
-      command: >
+      shell: >
         docker exec -i {{ mariadb_container_name }}
-        bash -c "echo '[mysqld]\nbind-address=0.0.0.0' > /etc/mysql/conf.d/custom.cnf && mysqladmin -uroot -p{{ mariadb_root_password }} shutdown"
+        bash -c "echo '[mysqld]\nbind-address=0.0.0.0' > /etc/mysql/conf.d/custom.cnf"
       notify: Restart MariaDB
 
   handlers:
