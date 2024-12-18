@@ -27,9 +27,9 @@
         autoremove: yes
         autoclean: yes
 
-    # 3. Open only ports for MySql (1433) and SSH (22)
-    - name: Open port 1433 for MySql
-      command: firewall-cmd --zone=public --add-port=1433/tcp --permanent
+    # 3. Open only ports for MariaDB (3306) and SSH (22)
+    - name: Open port 3306 for MariaDB
+      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
 
     - name: Open port 22 for SSH
       command: firewall-cmd --zone=public --add-port=22/tcp --permanent
@@ -48,7 +48,7 @@
           - software-properties-common
         state: present
 
-    - name: Add Microsoft SQL Server 2022 repository
+    - name: Add Microsoft SQL Server GPG key
       command: curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 
     - name: Add Microsoft SQL Server APT repository
@@ -95,15 +95,14 @@
         - cabalmanager
         - cmt_database
 
-    # 9. Configure backup locations (optional: backup location configuration is done in SQL Server itself)
+    # 9. Configure backup location (optional: backup location configuration is done in SQL Server itself)
     - name: Set backup location
       command: |
         echo "Backups are configured in SQL Server by default to be in /var/opt/mssql/backup."
       # This is for informational purposes since backup locations are set within the SQL Server configuration
 
-    # 10. Restart mssql-server to apply changes
+    # 10. Restart MS SQL Server
     - name: Restart mssql-server service
       service:
         name: mssql-server
         state: restarted
-
