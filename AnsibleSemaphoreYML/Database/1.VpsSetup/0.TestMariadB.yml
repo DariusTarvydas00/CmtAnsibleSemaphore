@@ -53,7 +53,9 @@
       shell: >
         docker exec -i {{ mariadb_container_name }}
         bash -c "echo '[mysqld]\nbind-address=0.0.0.0' > /etc/mysql/conf.d/custom.cnf"
-      notify: Restart MariaDB
+      notify:
+        - Stop MariaDB container
+        - Start MariaDB container
 
   handlers:
     - name: Stop MariaDB container
