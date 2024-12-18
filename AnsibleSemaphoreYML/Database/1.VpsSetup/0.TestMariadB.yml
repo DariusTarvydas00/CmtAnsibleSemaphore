@@ -9,7 +9,7 @@
     mssql_sa_password: "{{ lookup('env', 'SA_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
     mssql_data_volume: "mssql-data"
     mssql_port: 1433
-    docker_context: "/semaphore/project"  # Adjust this path as necessary to match your Semaphore workspace
+    docker_context: "/semaphore/repository/your_project_folder"  # Adjust this to the correct path
 
   tasks:
     # Step 1: Install Docker and Docker Compose
@@ -68,4 +68,3 @@
     - name: Display running container status
       debug:
         msg: "Container {{ mssql_container_name }} is running successfully."
-
