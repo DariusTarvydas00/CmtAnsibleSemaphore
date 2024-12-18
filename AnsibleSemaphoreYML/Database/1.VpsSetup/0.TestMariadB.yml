@@ -65,11 +65,3 @@
       debug:
         msg: "Container {{ mssql_container_name }} is running successfully."
 
-# Optional: Send notification upon completion
-# This can be used to send an email once the playbook completes.
-# Note: You would need to set up the SMTP details in your Semaphore configuration.
-
-notify:
-  email:
-    recipients:
-      - your_email@example.co
