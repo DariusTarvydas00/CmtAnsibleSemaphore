@@ -6,9 +6,10 @@
   vars:
     mssql_image_name: "mssql-server-image"
     mssql_container_name: "mssql-server-container"
-    mssql_sa_password: "{{ lookup('env', 'MARIADB_ROOT_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
+    mssql_sa_password: "{{ lookup('env', 'SA_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
     mssql_data_volume: "mssql-data"
     mssql_port: 1433
+    docker_context: "/semaphore/project"  # Adjust this path as necessary to match your Semaphore workspace
 
   tasks:
     # Step 1: Install Docker and Docker Compose
@@ -27,10 +28,17 @@
         enabled: true
 
     # Step 2: Build the Docker image
+    - name: Ensure Docker context directory exists
+      stat:
+        path: "{{ docker_context }}"
+      register: context_dir
+      failed_when: context_dir.stat.exists == false
+      msg: "The Docker context directory does not exist at {{ docker_context }}"
+
     - name: Build Docker Image
       command: docker build -t "{{ mssql_image_name }}" .
       args:
-        chdir: "/workspace"  # Ensure that the context is correct
+        chdir: "{{ docker_context }}"  # Ensure we are in the correct directory for the build context
 
     # Step 3: Run the Docker container
     - name: Run Docker Container
@@ -56,3 +64,12 @@
     - name: Display running container status
       debug:
         msg: "Container {{ mssql_container_name }} is running successfully."
+
+# Optional: Send notification upon completion
+# This can be used to send an email once the playbook completes.
+# Note: You would need to set up the SMTP details in your Semaphore configuration.
+
+notify:
+  email:
+    recipients:
+      - your_email@example.co
