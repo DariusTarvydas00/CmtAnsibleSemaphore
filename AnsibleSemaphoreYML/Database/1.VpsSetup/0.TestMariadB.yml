@@ -4,50 +4,30 @@
   become: true
 
   vars:
-    mssql_image_name: "mssql-server-image"
+    mssql_image_name: "mcr.microsoft.com/mssql/server:2022-latest"  # Pre-built MSSQL image from Microsoft
     mssql_container_name: "mssql-server-container"
     mssql_sa_password: "{{ lookup('env', 'SA_PASSWORD') }}"  # SA_PASSWORD stored in environment variable
     mssql_data_volume: "mssql-data"
     mssql_port: 1433
-    docker_context: "/semaphore/repository/database_project"  # Update this path to the actual location of your project files
 
   tasks:
-    # Step 1: Install Docker and Docker Compose
+    # Step 1: Install Docker
     - name: Install Docker
       apt:
         name:
           - docker.io
-          - docker-compose
         state: present
         update_cache: yes
 
+    # Step 2: Start and enable Docker service
     - name: Start and enable Docker service
       systemd:
         name: docker
         state: started
         enabled: true
 
-    # Step 2: Ensure Docker context directory exists, create it if not
-    - name: Check if Docker context directory exists
-      stat:
-        path: "{{ docker_context }}"
-      register: context_dir
-
-    - name: Create Docker context directory if it does not exist
-      file:
-        path: "{{ docker_context }}"
-        state: directory
-        mode: '0755'
-      when: context_dir.stat.exists == false
-
-    # Step 3: Build the Docker image
-    - name: Build Docker Image
-      command: docker build -t "{{ mssql_image_name }}" .
-      args:
-        chdir: "{{ docker_context }}"  # Make sure the build context is correct
-
-    # Step 4: Run the Docker container
-    - name: Run Docker Container
+    # Step 3: Run the Docker container
+    - name: Run MSSQL Docker Container
       docker_container:
         name: "{{ mssql_container_name }}"
         image: "{{ mssql_image_name }}"
@@ -61,7 +41,7 @@
         volumes:
           - "{{ mssql_data_volume }}:/var/opt/mssql"
 
-    # Step 5: Verify that the container is running
+    # Step 4: Verify the container is running
     - name: Verify running Docker container
       command: docker ps -f "name={{ mssql_container_name }}"
       register: container_status
