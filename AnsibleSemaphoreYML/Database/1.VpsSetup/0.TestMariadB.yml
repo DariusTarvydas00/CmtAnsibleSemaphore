@@ -56,7 +56,12 @@
       notify: Restart MariaDB
 
   handlers:
-    - name: Restart MariaDB
+    - name: Stop MariaDB container
       docker_container:
         name: "{{ mariadb_container_name }}"
-        state: restarted
+        state: stopped
+
+    - name: Start MariaDB container
+      docker_container:
+        name: "{{ mariadb_container_name }}"
+        state: started
