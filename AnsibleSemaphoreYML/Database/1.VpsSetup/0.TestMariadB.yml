@@ -27,20 +27,24 @@
         state: started
         enabled: true
 
-    # Step 2: Build the Docker image
-    - name: Ensure Docker context directory exists
+    # Step 2: Ensure Docker context directory exists
+    - name: Check if Docker context directory exists
       stat:
         path: "{{ docker_context }}"
       register: context_dir
-      failed_when: context_dir.stat.exists == false
-      msg: "The Docker context directory does not exist at {{ docker_context }}"
 
+    - name: Fail if Docker context directory does not exist
+      fail:
+        msg: "The Docker context directory does not exist at {{ docker_context }}"
+      when: context_dir.stat.exists == false
+
+    # Step 3: Build the Docker image
     - name: Build Docker Image
       command: docker build -t "{{ mssql_image_name }}" .
       args:
         chdir: "{{ docker_context }}"  # Ensure we are in the correct directory for the build context
 
-    # Step 3: Run the Docker container
+    # Step 4: Run the Docker container
     - name: Run Docker Container
       docker_container:
         name: "{{ mssql_container_name }}"
@@ -55,7 +59,7 @@
         volumes:
           - "{{ mssql_data_volume }}:/var/opt/mssql"
 
-    # Step 4: Verify that the container is running
+    # Step 5: Verify that the container is running
     - name: Verify running Docker container
       command: docker ps -f "name={{ mssql_container_name }}"
       register: container_status
