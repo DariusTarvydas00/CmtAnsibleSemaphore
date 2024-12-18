@@ -1,111 +1,53 @@
----
-- name: Configure server for Semaphore UI with Microsoft SQL Server
-  hosts: all
-  become: true
+version: v1.0
 
-  tasks:
-    # 1. Ensure firewalld is active and running
-    - name: Ensure firewalld is installed
-      package:
-        name: firewalld
-        state: present
+name: Run MSSQL Docker in Semaphore
 
-    - name: Ensure firewalld is started and enabled
-      service:
-        name: firewalld
-        state: started
-        enabled: true
+# Define your Docker image and pipeline settings
+docker:
+  version: '19.03'  # Define the Docker version to use
 
-    # 2. Update, upgrade, and clean up packages
-    - name: Update all packages
-      apt:
-        update_cache: yes
-        upgrade: dist
+# Define the pipeline's steps
+jobs:
+  build_and_run:
+    name: Build and Run MSSQL Docker
+    docker:
+      - image: "docker:19.03.12"  # Docker image used to run the job
+        context: /workspace        # Workspace context for Docker commands
+    steps:
+      - checkout  # Checkout your code (this fetches the Git repository)
+      
+      # Step 1: Install Docker Compose (if not available)
+      - run:
+          name: Install Docker Compose
+          command: |
+            curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            docker-compose --version
 
-    - name: Clean up unused packages
-      apt:
-        autoremove: yes
-        autoclean: yes
+      # Step 2: Build the Docker image manually
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -t mssql-server-image .  # Build Docker image from Dockerfile
 
-    # 3. Open only ports for MariaDB (3306) and SSH (22)
-    - name: Open port 3306 for MariaDB
-      command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+      # Step 3: Run the container using the built image
+      - run:
+          name: Run Docker Container
+          command: |
+            docker run -d -p 1433:1433 --name mssql-server-container \
+            -e ACCEPT_EULA=Y \
+            -e SA_PASSWORD=${SA_PASSWORD} \
+            -v mssql-data:/var/opt/mssql \
+            mssql-server-image  # Run the container in detached mode
 
-    - name: Open port 22 for SSH
-      command: firewall-cmd --zone=public --add-port=22/tcp --permanent
+      # Optional: Step 4: Verify the container is running
+      - run:
+          name: Verify Running Container
+          command: |
+            docker ps  # List running containers to confirm it is up
 
-    - name: Reload firewalld
-      service:
-        name: firewalld
-        state: reloaded
-
-    # 4. Install Microsoft SQL Server 2022
-    - name: Install required dependencies for Microsoft SQL Server
-      apt:
-        name:
-          - curl
-          - apt-transport-https
-          - software-properties-common
-        state: present
-
-    - name: Download Microsoft SQL Server GPG key
-      command: curl https://packages.microsoft.com/keys/microsoft.asc -o /tmp/microsoft.asc
-
-    - name: Add Microsoft SQL Server GPG key
-      command: apt-key add /tmp/microsoft.asc
-
-    - name: Add Microsoft SQL Server APT repository
-      command: add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/debian/11/prod $(lsb_release -cs) main"
-
-    - name: Install Microsoft SQL Server 2022
-      apt:
-        name: mssql-server
-        state: present
-
-    # 5. Run mssql-conf setup
-    - name: Setup Microsoft SQL Server
-      command: /opt/mssql/bin/mssql-conf setup
-      args:
-        creates: /var/opt/mssql/mssql.conf
-
-    # 6. Ensure that mssql-server is running
-    - name: Ensure mssql-server service is running
-      service:
-        name: mssql-server
-        state: started
-        enabled: true
-
-    # 7. Create a directory for backups
-    - name: Create backup directory for SQL Server
-      file:
-        path: /var/opt/mssql/backup
-        state: directory
-        mode: '0755'
-
-    # 8. Create SQL databases
-    - name: Create databases on SQL Server
-      mssql_db:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - Account
-        - Authentication
-        - CabalCash
-        - CabalGuild
-        - EventData
-        - NetcafeBilling
-        - Server01
-        - cabalmanager
-        - cmt_database
-
-    # 9. Configure backup location (optional: backup location configuration is done in SQL Server itself)
-    - name: Set backup location
-      command: |
-        echo "Backups are configured in SQL Server by default to be in /var/opt/mssql/backup."
-      # This is for informational purposes since backup locations are set within the SQL Server configuration
-
-    # 10. Restart MS SQL Server
-    - name: Restart mssql-server service
-      service:
-        name: mssql-server
-        state: restarted
+# Optional: Define a notification when the pipeline finishes
+notify:
+  email:
+    recipients:
+      - your_email@example.com
