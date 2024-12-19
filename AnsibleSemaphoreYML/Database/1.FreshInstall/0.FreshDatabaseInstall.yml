@@ -6,7 +6,8 @@
     # Fetch required environment variables
     user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
     user_password: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password from environment
-    mssql_sa_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
+    mssql_username: "{{ lookup('env', 'MSSQL_ROOT_USERNAME') }}"
+    mssql_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
     allowed_ips:
       - "{{ lookup('env', 'ALLOWED_IP_1') }}"
       - "{{ lookup('env', 'ALLOWED_IP_2') }}"
@@ -33,7 +34,7 @@
       when:
         - user_name is not defined
         - user_password is not defined
-        - mssql_sa_password is not defined
+        - mssql_password is not defined
         - allowed_ips is not defined
 
     # Step 2: Validate user password strength
@@ -118,10 +119,18 @@
           - "{{ mssql_port }}:{{ mssql_port }}"
         env:
           ACCEPT_EULA: "Y"
-          SA_PASSWORD: "{{ mssql_sa_password }}"
+          SA_PASSWORD: "{{ mssql_password }}"
         volumes:
           - "{{ mssql_data_volume }}:/var/opt/mssql"
 
+    # Step 8: Create a new MSSQL user
+    - name: Create a new MSSQL user
+      command: >
+        docker exec -i {{ mssql_container_name }} /opt/mssql-tools/bin/sqlcmd
+        -S localhost -U sa -P "{{ mssql_password }}"
+        -Q "CREATE LOGIN [{{ mssql_username }}] WITH PASSWORD='{{ mssql_password }}'; ALTER SERVER ROLE sysadmin ADD MEMBER [{{ mssql_username }}];"
+      when: mssql_username != "sa"
+    
     # Step 8: Wait for MSSQL container to be ready
     - name: Wait for MSSQL container to be ready
       wait_for:
