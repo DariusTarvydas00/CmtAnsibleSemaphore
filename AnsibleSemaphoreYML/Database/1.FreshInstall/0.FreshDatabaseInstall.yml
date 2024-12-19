@@ -41,10 +41,11 @@
       assert:
         that:
           - user_password | length >= 12
-          - user_password | regex_match(".*[A-Z].*")
-          - user_password | regex_match(".*[a-z].*")
-          - user_password | regex_match(".*[0-9].*")
-          - user_password | regex_match(".*[\W_].*")
+          - user_password is not none
+          - user_password | search("[A-Z]")  # At least one uppercase letter
+          - user_password | search("[a-z]")  # At least one lowercase letter
+          - user_password | search("[0-9]")  # At least one number
+          - user_password | search("[\\W_]")  # At least one special character
 
     # Step 3: Disable root login for SSH
     - name: Disable root login
