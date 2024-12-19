@@ -24,6 +24,9 @@
       - EventData
       - Netcafebilling
       - Server01
+    ssh_port: 2222  # Set non-standard SSH port
+    new_mssql_admin_user: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"
+    new_mssql_admin_password: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
 
   tasks:
     # Step 1: Ensure all required environment variables are set
@@ -35,6 +38,8 @@
         - user_password is not defined
         - mssql_password is not defined
         - allowed_ips is not defined
+        - new_mssql_admin_user is not defined
+        - new_mssql_admin_password is not defined
 
     # Step 2: Validate user password strength
     - name: Validate user password strength
@@ -96,6 +101,7 @@
           - sudo
           - docker.io
           - fail2ban
+          - aide
         state: present
         update_cache: yes
 
@@ -121,7 +127,7 @@
           SA_PASSWORD: "{{ mssql_password }}"
         volumes:
           - "{{ mssql_data_volume }}:/var/opt/mssql"
-            
+
     # Step 8: Install mssql-tools inside the container
     - name: Install mssql-tools inside the container
       command: >
@@ -130,8 +136,8 @@
         ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev && 
         echo 'export PATH=$PATH:/opt/mssql-tools/bin' >> ~/.bashrc && 
         source ~/.bashrc"
-    
-    # Step 8: Wait for MSSQL container to be ready
+
+    # Step 9: Wait for MSSQL container to be ready
     - name: Wait for MSSQL container to be ready
       wait_for:
         port: "{{ mssql_port }}"
@@ -139,7 +145,7 @@
         state: started
         timeout: 300
 
-    # Step 9: Configure MSSQL firewall rules for allowed IPs
+    # Step 10: Configure MSSQL firewall rules for allowed IPs
     - name: Add firewall rule for allowed IPs
       command: >
         firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
@@ -152,8 +158,74 @@
       notify:
         - Reload firewalld
 
-    # Step 10: Install and configure Fail2Ban
-    - name: Configure Fail2Ban for MSSQL
+    # Step 11: Create a new MSSQL admin user with sysadmin role
+    - name: Create new MSSQL admin user
+      command: >
+        docker exec -i {{ mssql_container_name }} /opt/mssql-tools/bin/sqlcmd
+        -S localhost -U sa -P "{{ mssql_password }}" 
+        -Q "CREATE LOGIN {{ new_mssql_admin_user }} WITH PASSWORD='{{ new_mssql_admin_password }}'; ALTER SERVER ROLE sysadmin ADD MEMBER {{ new_mssql_admin_user }};"
+      ignore_errors: yes
+      register: mssql_user_creation_result
+
+    - name: Check if the MSSQL user creation was successful
+      debug:
+        msg: "MSSQL Admin user {{ new_mssql_admin_user }} created successfully."
+      when: mssql_user_creation_result.rc == 0
+
+    - name: Fail if MSSQL admin user creation failed
+      fail:
+        msg: "Failed to create MSSQL Admin user {{ new_mssql_admin_user }}."
+      when: mssql_user_creation_result.rc != 0
+
+    # Step 12: Disable the 'sa' account in MSSQL
+    - name: Disable the 'sa' account in MSSQL
+      command: >
+        docker exec -i {{ mssql_container_name }} /opt/mssql-tools/bin/sqlcmd
+        -S localhost -U sa -P "{{ mssql_password }}" 
+        -Q "ALTER LOGIN sa DISABLE"
+      ignore_errors: yes
+
+    # Step 13: Configure SSH settings
+    - name: Set SSH to use a non-standard port
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port'
+        line: "Port {{ ssh_port }}"
+
+    - name: Set maxauthtries to 3 for SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries 3'
+
+    - name: Limit SSH access to specific IPs
+      lineinfile:
+        path: /etc/hosts.allow
+        line: "sshd: {{ item }}"
+      with_items: "{{ allowed_ips }}"
+      state: present
+
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
+
+    # Step 14: Configure fail2ban for SSH and MSSQL
+    - name: Configure fail2ban for SSH
+      copy:
+        dest: /etc/fail2ban/jail.d/ssh.conf
+        content: |
+          [sshd]
+          enabled  = true
+          port     = {{ ssh_port }}
+          filter   = sshd
+          logpath  = /var/log/auth.log
+          maxretry = 3
+          bantime  = 600
+      notify:
+        - Restart Fail2Ban
+
+    - name: Configure fail2ban for MSSQL
       copy:
         dest: /etc/fail2ban/jail.d/mssql.conf
         content: |
@@ -167,39 +239,46 @@
       notify:
         - Restart Fail2Ban
 
-    # Step 11: Enable TCP SYN cookies for flood protection
-    - name: Enable TCP SYN cookies
-      sysctl:
-        name: net.ipv4.tcp_syncookies
-        value: 1
-        state: present
-        reload: yes
+    # Step 15: Rate limiting and SYN flood protection using iptables
+    - name: Rate limit SSH connections using iptables
+      command: >
+        iptables -A INPUT -p tcp --dport {{ ssh_port }} -m state --state NEW -m recent --set
+      ignore_errors: yes
 
-    - name: Make TCP SYN cookies setting persistent
-      lineinfile:
-        path: /etc/sysctl.conf
-        line: "net.ipv4.tcp_syncookies = 1"
-        create: yes
-        state: present
-      notify:
-        - Reload sysctl
+    - name: Limit incoming MSSQL connections using iptables
+      command: >
+        iptables -A INPUT -p tcp --dport 1433 -m state --state NEW -m recent --set
+      ignore_errors: yes
 
-  handlers:
-    - name: Restart SSH service
-      service:
-        name: ssh
-        state: restarted
+    - name: Configure SYN flood protection via iptables
+      command: >
+        iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 5 -j ACCEPT
+      ignore_errors: yes
 
-    - name: Reload firewalld
-      service:
-        name: firewalld
-        state: reloaded
+    # Step 16: Apply system hardening via AIDE (Advanced Intrusion Detection)
+    - name: Initialize AIDE
+      command: aideinit
+      ignore_errors: yes
 
-    - name: Restart Fail2Ban
-      service:
-        name: fail2ban
-        state: restarted
+    - name: Configure AIDE system configuration
+      copy:
+        src: /etc/aide/aide.conf
+        dest: /etc/aide/aide.conf
+        owner: root
+        group: root
+        mode: 0644
 
-    - name: Reload sysctl
-      command: sysctl -p
-      become: true
+    # Step 17: Backup configuration for MSSQL and important files
+    - name: Backup MSSQL databases
+      command: >
+        docker exec -i {{ mssql_container_name }} /opt/mssql-tools/bin/sqlcmd 
+        -S localhost -U sa -P "{{ mssql_password }}"
+        -Q "BACKUP DATABASE {{ item }} TO DISK = '/var/opt/mssql/backup/{{ item }}_backup.bak'"
+      with_items: "{{ mssql_databases }}"
+
+    - name: Backup important system files
+      synchronize:
+        src: "/etc/ /root/"
+        dest: "/mnt/backups/"
+        mode: pull
+        recursive: yes
