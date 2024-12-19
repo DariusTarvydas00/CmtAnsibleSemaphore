@@ -25,7 +25,7 @@
       - Netcafebilling
       - Server01
     ssh_port: 2222  # Set non-standard SSH port
-    new_mssql_admin_user: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"
+    new_mssql_admin_user: "{{ lookup('env', 'NEW_MSSQL_ADMIN_USERNAME') }}"
     new_mssql_admin_password: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
 
   tasks:
