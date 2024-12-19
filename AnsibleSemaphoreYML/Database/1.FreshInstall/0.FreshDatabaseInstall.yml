@@ -46,7 +46,6 @@
           - user_password | regex_search('[0-9]')  # At least one numeric digit
           - user_password | regex_search('[\\W_]')  # At least one special character
 
-
     # Step 3: Disable root login for SSH
     - name: Disable root login
       lineinfile:
