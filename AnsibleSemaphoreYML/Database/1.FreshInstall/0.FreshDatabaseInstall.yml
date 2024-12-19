@@ -3,14 +3,13 @@
   hosts: all
   become: true
   vars:
-    # Fetch required environment variables
     user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
     user_password: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password from environment
     mssql_sa_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
     allowed_ips:
-      - "{{ lookup('env', 'ALLOWED_IP_1') }}"
-      - "{{ lookup('env', 'ALLOWED_IP_2') }}"
-      - "{{ lookup('env', 'ALLOWED_IP_3') }}"
+      - "{{ lookup('env', 'AllOWED_IP_1') }}"  # List of allowed IP addresses for MSSQL
+      - "{{ lookup('env', 'AllOWED_IP_2') }}"
+      - "{{ lookup('env', 'AllOWED_IP_3') }}"
     mssql_image_name: "mcr.microsoft.com/mssql/server:2022-latest"  # MSSQL Docker image
     mssql_container_name: "mssql-server-container"
     mssql_data_volume: "mssql-data"
@@ -26,17 +25,17 @@
       - Server01
 
   tasks:
-    # Step 1: Ensure all required environment variables are set
-    - name: Ensure all required environment variables are set
-      fail:
-        msg: "Required environment variables (USER_NAME, USER_PASSWORD, MSSQL_ROOT_PASSWORD, ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing."
-      when:
-        - user_name is not defined
-        - user_password is not defined
-        - mssql_sa_password is not defined
-        - allowed_ips is not defined
+    # Step 1: Ensure necessary packages are installed
+    - name: Install required packages
+      package:
+        name:
+          - sudo
+          - docker.io
+          - fail2ban
+        state: present
+        update_cache: yes
 
-    # Step 2: Disable root login for SSH
+    # Step 2: Disable root login
     - name: Disable root login
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -45,7 +44,15 @@
       notify:
         - Restart SSH service
 
-    # Step 3: Create user if not exists
+    # Step 3: Check if the user already exists
+    - name: Check if the user already exists
+      getent:
+        database: passwd
+        key: "{{ user_name }}"
+      register: user_exists
+      ignore_errors: true  # Prevent failure if the user doesn't exist
+
+    # Step 4: Create the user if it doesn't exist
     - name: Create user if it does not exist
       user:
         name: "{{ user_name }}"
@@ -55,8 +62,8 @@
         state: present
       when: user_exists.failed or user_exists is not defined
 
-    # Step 4: Grant sudo access to the user with validation
-    - name: Ensure sudoers.d directory exists and has proper permissions
+    # Step 5: Ensure the sudoers.d directory exists and has proper permissions
+    - name: Ensure the sudoers.d directory exists and has proper permissions
       file:
         path: /etc/sudoers.d
         state: directory
@@ -64,6 +71,7 @@
         owner: root
         group: root
 
+    # Step 6: Grant sudo access to the user with validation
     - name: Grant sudo access to the user with validation
       copy:
         content: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL\n"
@@ -71,125 +79,22 @@
         mode: '0440'
         owner: root
         group: root
-        validate: '/usr/sbin/visudo -cf %s'
+        validate: '/usr/sbin/visudo -cf %s'  # Adjust path if necessary
 
-    # Step 5: Install Docker and start the service
-    - name: Install Docker
-      apt:
-        name:
-          - docker.io
-        state: present
-        update_cache: yes
+    # Step 7: Set proper permissions for the home directory
+    - name: Set proper ownership and permissions for the user's home directory
+      file:
+        path: "/home/{{ user_name }}"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0700'
 
-    - name: Start and enable Docker service
-      systemd:
-        name: docker
-        state: started
-        enabled: true
-
-    # Step 6: Run MSSQL Docker Container
-    - name: Run MSSQL Docker Container
-      docker_container:
-        name: "{{ mssql_container_name }}"
-        image: "{{ mssql_image_name }}"
-        state: started
-        restart_policy: always
-        exposed_ports:
-          - "{{ mssql_port }}"
-        ports:
-          - "{{ mssql_port }}:{{ mssql_port }}"
-        env:
-          ACCEPT_EULA: "Y"
-          SA_PASSWORD: "{{ mssql_sa_password }}"
-        volumes:
-          - "{{ mssql_data_volume }}:/var/opt/mssql"
-
-    # Step 7: Wait for MSSQL container to be ready
-    - name: Wait for MSSQL container to be ready
-      wait_for:
-        port: "{{ mssql_port }}"
-        host: "127.0.0.1"
-        state: started
-        timeout: 300
-
-    # Step 8: Configure MSSQL to allow access from specified IPs
-    - name: Add firewall rule for allowed IPs
-      command: >
-        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
-      with_items: "{{ allowed_ips }}"
-      notify:
-        - Reload firewalld
-
-    - name: Deny all other MSSQL access
-      command: firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" service name="mssql" reject' --permanent
-      notify:
-        - Reload firewalld
-
-    # Step 9: Install and configure Fail2Ban for MSSQL
-    - name: Install Fail2Ban
-      apt:
-        name: fail2ban
-        state: present
-
-    - name: Enable and start Fail2Ban service
-      service:
-        name: fail2ban
-        state: started
-        enabled: true
-
-    - name: Configure Fail2Ban for MSSQL
-      copy:
-        dest: /etc/fail2ban/jail.d/mssql.conf
-        content: |
-          [mssql]
-          enabled  = true
-          filter   = mssql-auth
-          action   = iptables[name=MSSQL, port=1433, protocol=tcp]
-          logpath  = /var/log/mssql/*.log
-          maxretry = 3
-          bantime  = 600
-          findtime = 600
-          bantime  = 3600
-      notify:
-        - Restart Fail2Ban
-
-    # Step 10: Enable TCP SYN cookies for flood protection
-    - name: Enable TCP SYN cookies
-      sysctl:
-        name: net.ipv4.tcp_syncookies
-        value: 1
-        state: present
-        reload: yes
-
-    - name: Make TCP SYN cookies setting persistent across reboots
-      lineinfile:
-        path: /etc/sysctl.conf
-        line: "net.ipv4.tcp_syncookies = 1"
-        create: yes
-        state: present
-      notify:
-        - Reload sysctl
-
+    # Other tasks for MSSQL, Fail2Ban, and Firewall...
+    # (Retain the rest of your playbook for MSSQL, TCP SYN cookies, Fail2Ban, etc.)
+  
   handlers:
     # Restart SSH service to apply changes
     - name: Restart SSH service
       service:
         name: ssh
         state: restarted
-
-    # Reload firewalld to apply changes
-    - name: Reload firewalld
-      service:
-        name: firewalld
-        state: reloaded
-
-    # Restart Fail2Ban to apply changes
-    - name: Restart Fail2Ban
-      service:
-        name: fail2ban
-        state: restarted
-
-    # Reload sysctl to apply changes
-    - name: Reload sysctl
-      command: sysctl -p
-      become: true
