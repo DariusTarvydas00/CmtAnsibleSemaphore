@@ -36,17 +36,7 @@
         - mssql_sa_password is not defined
         - allowed_ips is not defined
 
-    # Step 2: Validate user password strength
-    - name: Validate user password strength
-      assert:
-        that:
-          - user_password | length >= 12
-          - user_password | regex_match(".*[A-Z].*")
-          - user_password | regex_match(".*[a-z].*")
-          - user_password | regex_match(".*[0-9].*")
-          - user_password | regex_match(".*[\W_].*")
-
-    # Step 3: Disable root login for SSH
+    # Step 2: Disable root login for SSH
     - name: Disable root login
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -55,7 +45,7 @@
       notify:
         - Restart SSH service
 
-    # Step 4: Create user if not exists
+    # Step 3: Create user if not exists
     - name: Check if the user already exists
       getent:
         database: passwd
@@ -72,7 +62,7 @@
         state: present
       when: user_exists.failed or user_exists is not defined
 
-    # Step 5: Grant sudo access to the user with validation
+    # Step 4: Grant sudo access to the user with validation
     - name: Ensure sudoers.d directory exists and has proper permissions
       file:
         path: /etc/sudoers.d
@@ -90,7 +80,7 @@
         group: root
         validate: '/usr/sbin/visudo -cf %s'
 
-    # Step 6: Install Docker and start the service
+    # Step 5: Install Docker and start the service
     - name: Install Docker
       apt:
         name:
@@ -104,7 +94,7 @@
         state: started
         enabled: true
 
-    # Step 7: Run MSSQL Docker Container
+    # Step 6: Run MSSQL Docker Container
     - name: Run MSSQL Docker Container
       docker_container:
         name: "{{ mssql_container_name }}"
@@ -121,7 +111,7 @@
         volumes:
           - "{{ mssql_data_volume }}:/var/opt/mssql"
 
-    # Step 8: Wait for MSSQL container to be ready
+    # Step 7: Wait for MSSQL container to be ready
     - name: Wait for MSSQL container to be ready
       wait_for:
         port: "{{ mssql_port }}"
@@ -129,7 +119,7 @@
         state: started
         timeout: 300
 
-    # Step 9: Configure MSSQL to allow access from specified IPs
+    # Step 8: Configure MSSQL to allow access from specified IPs
     - name: Add firewall rule for allowed IPs
       command: >
         firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
@@ -142,7 +132,7 @@
       notify:
         - Reload firewalld
 
-    # Step 10: Install and configure Fail2Ban for MSSQL
+    # Step 9: Install and configure Fail2Ban for MSSQL
     - name: Install Fail2Ban
       apt:
         name: fail2ban
@@ -170,7 +160,7 @@
       notify:
         - Restart Fail2Ban
 
-    # Step 11: Enable TCP SYN cookies for flood protection
+    # Step 10: Enable TCP SYN cookies for flood protection
     - name: Enable TCP SYN cookies
       sysctl:
         name: net.ipv4.tcp_syncookies
