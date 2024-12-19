@@ -28,13 +28,13 @@
   tasks:
     # Step 1: Ensure all required environment variables are set
     - name: Ensure all required environment variables are set
-      assert:
-        that:
-          - user_name is defined
-          - user_password is defined
-          - mssql_sa_password is defined
-          - allowed_ips is defined
-      msg: "Required environment variables (USER_NAME, USER_PASSWORD, MSSQL_ROOT_PASSWORD, ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing."
+      fail:
+        msg: "Required environment variables (USER_NAME, USER_PASSWORD, MSSQL_ROOT_PASSWORD, ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing."
+      when:
+        - user_name is not defined
+        - user_password is not defined
+        - mssql_sa_password is not defined
+        - allowed_ips is not defined
 
     # Step 2: Validate user password strength
     - name: Validate user password strength
@@ -45,7 +45,6 @@
           - user_password | regex_match(".*[a-z].*")
           - user_password | regex_match(".*[0-9].*")
           - user_password | regex_match(".*[\W_].*")
-      msg: "Password must be at least 12 characters long, with uppercase, lowercase, number, and special character."
 
     # Step 3: Disable root login for SSH
     - name: Disable root login
