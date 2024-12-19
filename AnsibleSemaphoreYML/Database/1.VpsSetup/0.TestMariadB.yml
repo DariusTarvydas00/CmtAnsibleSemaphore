@@ -34,7 +34,7 @@
         state: started
         restart_policy: always
         ports:
-          - "1433:{{ mariadb_port }}"
+          - "{{ mariadb_port }}:1433"
         env:
           MYSQL_ROOT_PASSWORD: "{{ mariadb_root_password }}"  # Environment variable for root password
         volumes:
