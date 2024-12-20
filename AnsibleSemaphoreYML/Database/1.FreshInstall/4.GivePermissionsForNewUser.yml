@@ -5,7 +5,7 @@
     admin_vps_user_name: "{{ lookup('env', 'ADMIN_VPS_USER_NAME') }}"  # Admin User Name
   tasks:
     # Ensure sudoers.d directory exists and has proper permissions
-    - name: 1. Ensure sudoers.d directory exists and has proper permissions
+    - name: Ensure sudoers.d directory exists and has proper permissions
       file:
         path: /etc/sudoers.d
         state: directory
@@ -13,20 +13,21 @@
         owner: root
         group: root
 
-    # Remove any incorrectly created directory or file that would conflict with the sudoers file
-    - name: 2. Remove incorrect directory if exists (for /etc/sudoers.d/{{ admin_vps_user_name }})
+    # Remove any conflicting sudoers file for the user (if it exists)
+    - name: Remove conflicting sudoers file for the user
       file:
         path: "/etc/sudoers.d/{{ admin_vps_user_name }}"
         state: absent
-      ignore_errors: yes  # Ignore if it doesn't exist or is not a directory
+      ignore_errors: yes  # Ignore if file doesn't exist
 
-    # Grant sudo access to the user with validation (password required for sudo)
-    - name: 3. Grant sudo access to the user with validation
-      copy:
-        content: "{{ admin_vps_user_name }} ALL=(ALL) ALL\n"  # No NOPASSWD here, so password will be required
-        dest: "/etc/sudoers.d/{{ admin_vps_user_name }}"  # This should be a file, not a directory
+    # Grant sudo access to the user (no password required) using lineinfile
+    - name: Grant sudo access to the user (NOPASSWD)
+      lineinfile:
+        path: "/etc/sudoers.d/{{ admin_vps_user_name }}"
+        line: "{{ admin_vps_user_name }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes  # Create the file if it doesn't exist
         mode: '0440'
         owner: root
         group: root
-        validate: '/usr/sbin/visudo -cf %s'  # Ensures the sudoers file is valid before applying
+        validate: '/usr/sbin/visudo -cf %s'  # Ensures sudoers file is valid before applying
       when: admin_vps_user_name is defined
