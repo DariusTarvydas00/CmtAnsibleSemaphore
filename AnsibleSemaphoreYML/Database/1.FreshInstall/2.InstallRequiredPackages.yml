@@ -1,5 +1,5 @@
 ---
-- name: System Update, Upgrade, and Clean Up with Validation
+- name: Install required packages
   hosts: all
   become: true
   tasks:
@@ -7,9 +7,9 @@
     - name: Install required packages
       apt:
         name:
-        - sudo
-        - docker.io
-        - fail2ban
-        - aide
-      state: present
-      update_cache: yes
+          - sudo
+          - docker.io
+          - fail2ban
+          - aide
+        state: present
+        update_cache: yes
