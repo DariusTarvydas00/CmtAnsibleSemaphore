@@ -1,0 +1,126 @@
+---
+- name: Disable root login
+  hosts: all
+  become: true
+  vars:
+    # Fetch required environment variables
+    allowed_ips:
+      - "{{ lookup('env', 'ALLOWED_IP_1') }}"
+      - "{{ lookup('env', 'ALLOWED_IP_2') }}"
+      - "{{ lookup('env', 'ALLOWED_IP_3') }}"
+    ssh_port: "{{ lookup('env', 'SSH_PORT') | default(22) }}"  # Set non-standard SSH port with default
+    
+  tasks:
+    # Ensure all required environment variables are set
+    - name: 1. Ensure all required environment variables are set
+      fail:
+        msg: >-
+          Required environment variables 
+          ( ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing.
+      when:
+        - allowed_ips | length != 3
+
+    # Configure MSSQL firewall rules for allowed IPs
+    - name: 1. Add firewall rule for allowed IPs
+      command: >
+        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
+      with_items: "{{ allowed_ips }}"
+      notify:
+        - Reload firewalld
+
+    - name: 2. Deny all other MSSQL access
+      command: firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" service name="mssql" reject' --permanent
+      notify:
+        - Reload firewalld
+        
+    # Configure SSH settings
+    - name: 3. Set SSH to use a non-standard port
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port'
+        line: "Port {{ ssh_port }}"
+
+    - name: 4. Set maxauthtries to 3 for SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries 3'
+
+    - name: 5. Limit SSH access to specific IPs
+      lineinfile:
+        path: /etc/hosts.allow
+        line: "sshd: {{ item }}"
+        create: yes
+      with_items: "{{ allowed_ips }}"
+
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
+        
+    # Configure fail2ban for SSH and MSSQL
+    - name: 6. Configure fail2ban for SSH
+      copy:
+        dest: /etc/fail2ban/jail.d/ssh.conf
+        content: |
+          [sshd]
+          enabled  = true
+          port     = {{ ssh_port }}
+          filter   = sshd
+          logpath  = /var/log/auth.log
+          maxretry = 3
+          bantime  = 600
+      notify:
+        - Restart Fail2Ban
+
+    # Rate limiting and SYN flood protection using iptables
+    - name: 7. Rate limit SSH connections using iptables
+      command: >
+        iptables -A INPUT -p tcp --dport {{ ssh_port }} -m state --state NEW -m recent --set
+      ignore_errors: yes
+
+    - name: 8. Limit incoming MSSQL connections using iptables
+      command: >
+        iptables -A INPUT -p tcp --dport 1433 -m state --state NEW -m recent --set
+      ignore_errors: yes
+
+    - name: 9. Configure SYN flood protection via iptables
+      command: >
+        iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 5 -j ACCEPT
+      ignore_errors: yes
+
+    # Apply system hardening via AIDE (Advanced Intrusion Detection)
+    - name: 10. Initialize AIDE
+      command: aideinit
+      ignore_errors: yes
+
+    - name: 11. Configure AIDE system configuration
+      copy:
+        src: /etc/aide/aide.conf
+        dest: /etc/aide/aide.conf
+        owner: root
+        group: root
+        mode: 0644
+        
+    # Disable root login for SSH
+    - name: 12. Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify:
+        - Restart SSH service
+          
+  handlers:
+    - name: Reload firewalld
+      command: firewall-cmd --reload
+
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Restart Fail2Ban
+      service:
+        name: fail2ban
+        state: restarted

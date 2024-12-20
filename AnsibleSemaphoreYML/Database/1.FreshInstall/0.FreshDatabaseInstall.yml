@@ -39,19 +39,6 @@
         state: started
         timeout: 300
 
-    # Step 10: Configure MSSQL firewall rules for allowed IPs
-    - name: Add firewall rule for allowed IPs
-      command: >
-        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
-      with_items: "{{ allowed_ips }}"
-      notify:
-        - Reload firewalld
-
-    - name: Deny all other MSSQL access
-      command: firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" service name="mssql" reject' --permanent
-      notify:
-        - Reload firewalld
-
     # Step 11: Create a new MSSQL admin user with sysadmin role
     - name: Create new MSSQL admin user
       command: >
@@ -79,88 +66,49 @@
         -Q "ALTER LOGIN sa DISABLE"
       ignore_errors: yes
 
-    # Step 13: Configure SSH settings
-    - name: Set SSH to use a non-standard port
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?Port'
-        line: "Port {{ ssh_port }}"
 
-    - name: Set maxauthtries to 3 for SSH
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?MaxAuthTries'
-        line: 'MaxAuthTries 3'
-
-    - name: Limit SSH access to specific IPs
-      lineinfile:
-        path: /etc/hosts.allow
-        line: "sshd: {{ item }}"
-        create: yes
-      with_items: "{{ allowed_ips }}"
-
-    - name: Restart SSH service
-      service:
-        name: ssh
-        state: restarted
-
-    # Step 14: Configure fail2ban for SSH and MSSQL
-    - name: Configure fail2ban for SSH
-      copy:
-        dest: /etc/fail2ban/jail.d/ssh.conf
-        content: |
-          [sshd]
-          enabled  = true
-          port     = {{ ssh_port }}
-          filter   = sshd
-          logpath  = /var/log/auth.log
-          maxretry = 3
-          bantime  = 600
-      notify:
-        - Restart Fail2Ban
-
-    - name: Configure fail2ban for MSSQL
-      copy:
-        dest: /etc/fail2ban/jail.d/mssql.conf
-        content: |
-          [mssql]
-          enabled  = true
-          filter   = mssql-auth
-          action   = iptables[name=MSSQL, port=1433, protocol=tcp]
-          logpath  = /var/log/mssql/*.log
-          maxretry = 3
-          bantime  = 600
-      notify:
-        - Restart Fail2Ban
-
-    # Step 15: Rate limiting and SYN flood protection using iptables
-    - name: Rate limit SSH connections using iptables
-      command: >
-        iptables -A INPUT -p tcp --dport {{ ssh_port }} -m state --state NEW -m recent --set
-      ignore_errors: yes
-
-    - name: Limit incoming MSSQL connections using iptables
-      command: >
-        iptables -A INPUT -p tcp --dport 1433 -m state --state NEW -m recent --set
-      ignore_errors: yes
-
-    - name: Configure SYN flood protection via iptables
-      command: >
-        iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 5 -j ACCEPT
-      ignore_errors: yes
-
-    # Step 16: Apply system hardening via AIDE (Advanced Intrusion Detection)
-    - name: Initialize AIDE
-      command: aideinit
-      ignore_errors: yes
-
-    - name: Configure AIDE system configuration
-      copy:
-        src: /etc/aide/aide.conf
-        dest: /etc/aide/aide.conf
-        owner: root
-        group: root
-        mode: 0644
+#    - name: Configure fail2ban for MSSQL
+#      copy:
+#        dest: /etc/fail2ban/jail.d/mssql.conf
+#        content: |
+#          [mssql]
+#          enabled  = true
+#          filter   = mssql-auth
+#          action   = iptables[name=MSSQL, port=1433, protocol=tcp]
+#          logpath  = /var/log/mssql/*.log
+#          maxretry = 3
+#          bantime  = 600
+#      notify:
+#        - Restart Fail2Ban
+#
+#    # Step 15: Rate limiting and SYN flood protection using iptables
+#    - name: Rate limit SSH connections using iptables
+#      command: >
+#        iptables -A INPUT -p tcp --dport {{ ssh_port }} -m state --state NEW -m recent --set
+#      ignore_errors: yes
+#
+#    - name: Limit incoming MSSQL connections using iptables
+#      command: >
+#        iptables -A INPUT -p tcp --dport 1433 -m state --state NEW -m recent --set
+#      ignore_errors: yes
+#
+#    - name: Configure SYN flood protection via iptables
+#      command: >
+#        iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 5 -j ACCEPT
+#      ignore_errors: yes
+#
+#    # Step 16: Apply system hardening via AIDE (Advanced Intrusion Detection)
+#    - name: Initialize AIDE
+#      command: aideinit
+#      ignore_errors: yes
+#
+#    - name: Configure AIDE system configuration
+#      copy:
+#        src: /etc/aide/aide.conf
+#        dest: /etc/aide/aide.conf
+#        owner: root
+#        group: root
+#        mode: 0644
 
     # Step 17: Backup configuration for MSSQL and important files
     - name: Backup MSSQL databases
@@ -177,16 +125,16 @@
         mode: pull
         recursive: yes
 
-  handlers:
-    - name: Reload firewalld
-      command: firewall-cmd --reload
-
-    - name: Restart SSH service
-      service:
-        name: ssh
-        state: restarted
-
-    - name: Restart Fail2Ban
-      service:
-        name: fail2ban
-        state: restarted
+#  handlers:
+#    - name: Reload firewalld
+#      command: firewall-cmd --reload
+#
+#    - name: Restart SSH service
+#      service:
+#        name: ssh
+#        state: restarted
+#
+#    - name: Restart Fail2Ban
+#      service:
+#        name: fail2ban
+#        state: restarted
