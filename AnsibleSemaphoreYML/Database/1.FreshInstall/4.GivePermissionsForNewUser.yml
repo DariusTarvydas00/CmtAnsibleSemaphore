@@ -13,8 +13,15 @@
         owner: root
         group: root
 
+    # Remove any incorrectly created directory or file that would conflict with the sudoers file
+    - name: 2. Remove incorrect directory if exists (for /etc/sudoers.d/{{ admin_vps_user_name }})
+      file:
+        path: "/etc/sudoers.d/{{ admin_vps_user_name }}"
+        state: absent
+      ignore_errors: yes  # Ignore if it doesn't exist or is not a directory
+
     # Grant sudo access to the user with validation (password required for sudo)
-    - name: 2. Grant sudo access to the user with validation
+    - name: 3. Grant sudo access to the user with validation
       copy:
         content: "{{ admin_vps_user_name }} ALL=(ALL) ALL\n"  # No NOPASSWD here, so password will be required
         dest: "/etc/sudoers.d/{{ admin_vps_user_name }}"  # This should be a file, not a directory
@@ -22,3 +29,4 @@
         owner: root
         group: root
         validate: '/usr/sbin/visudo -cf %s'  # Ensures the sudoers file is valid before applying
+      when: admin_vps_user_name is defined
