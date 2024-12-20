@@ -23,6 +23,7 @@
       - "{{ lookup('env', 'DATABASE_NAME_6') }}"
       - "{{ lookup('env', 'DATABASE_NAME_7') }}"
       - "{{ lookup('env', 'DATABASE_NAME_8') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_9') }}"
     ssh_port: "{{ lookup('env', 'SSH_PORT') | default(22) }}"  # Set non-standard SSH port with default
     new_mssql_admin_user_name: "{{ lookup('env', 'MSSQL_ADMIN_USERNAME') }}"  # New MSSQL admin username
     new_mssql_admin_password: "{{ lookup('env', 'MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
@@ -45,7 +46,7 @@
         - allowed_ips | length != 3
         - mssql_container_name is not defined
         - mssql_data_volume is not defined
-        - mssql_databases | length != 8
+        - mssql_databases | length != 9
         - new_mssql_admin_user_name is not defined
         - new_mssql_admin_password is not defined
         - new_mssql_cmt_user_name is not defined
