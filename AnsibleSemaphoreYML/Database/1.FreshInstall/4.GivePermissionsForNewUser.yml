@@ -17,7 +17,7 @@
     - name: 2. Grant sudo access to the user with validation
       copy:
         content: "{{ admin_vps_user_name }} ALL=(ALL) ALL\n"  # No NOPASSWD here, so password will be required
-        dest: "/etc/sudoers.d/{{ admin_vps_user_name }}"
+        dest: "/etc/sudoers.d/{{ admin_vps_user_name }}"  # This should be a file, not a directory
         mode: '0440'
         owner: root
         group: root
