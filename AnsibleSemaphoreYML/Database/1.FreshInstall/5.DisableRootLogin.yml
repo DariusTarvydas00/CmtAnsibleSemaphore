@@ -1,5 +1,5 @@
 ---
-- name: Create new admin user
+- name: Disable root login
   hosts: all
   become: true
   tasks:
