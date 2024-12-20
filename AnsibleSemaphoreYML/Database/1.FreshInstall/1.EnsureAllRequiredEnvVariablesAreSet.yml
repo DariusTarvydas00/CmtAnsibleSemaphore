@@ -1,0 +1,108 @@
+---
+- name: System Update, Upgrade, and Clean Up with Validation
+  hosts: all
+  become: true
+  vars:
+    # Fetch required environment variables
+    admin_vps_user_name: "{{ lookup('env', 'ADMIN_VPS_USER_NAME') }}"  # Admin User Name
+    admin_vps_password: "{{ lookup('env', 'ADMIN_VPS_USER_PASSWORD') }}"  # Admin Password
+    mssql_root_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
+    allowed_ips:
+      - "{{ lookup('env', 'ALLOWED_IP_1') }}"
+      - "{{ lookup('env', 'ALLOWED_IP_2') }}"
+      - "{{ lookup('env', 'ALLOWED_IP_3') }}"
+    mssql_container_name: "{{ lookup('env', 'MSSQL_CONTAINER_NAME') }}"  # MSSQL Container Name
+    mssql_data_volume: "{{ lookup('env', 'MSSQL_DATA_VOLUME') }}"  # MSSQL Data Volume
+    mssql_port: "{{ lookup('env', 'MSSQL_PORT') | default(1433) }}"  # MSSQL port with default
+    mssql_databases:
+      - "{{ lookup('env', 'DATABASE_NAME_1') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_2') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_3') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_4') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_5') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_6') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_7') }}"
+      - "{{ lookup('env', 'DATABASE_NAME_8') }}"
+    ssh_port: "{{ lookup('env', 'SSH_PORT') | default(22) }}"  # Set non-standard SSH port with default
+    new_mssql_admin_user_name: "{{ lookup('env', 'MSSQL_ADMIN_USERNAME') }}"  # New MSSQL admin username
+    new_mssql_admin_password: "{{ lookup('env', 'MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
+    new_mssql_cmt_user_name: "{{ lookup('env', 'MSSQL_CMT_USERNAME') }}"  # New MSSQL CMT username
+    new_mssql_cmt_password: "{{ lookup('env', 'MSSQL_CMT_PASSWORD') }}"  # New MSSQL CMT password
+
+  tasks:
+    # Step 1: Ensure all required environment variables are set
+    - name: 1. Ensure all required environment variables are set
+      fail:
+        msg: >-
+          Required environment variables 
+          (ADMIN_VPS_USER_NAME, ADMIN_VPS_USER_PASSWORD, MSSQL_ROOT_PASSWORD, 
+          ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3, MSSQL_CONTAINER_NAME, MSSQL_DATA_VOLUME, MSSQL_ADMIN_USERNAME, MSSQL_ADMIN_PASSWORD, 
+          MSSQL_CMT_USERNAME, MSSQL_CMT_PASSWORD) are missing.
+      when:
+        - admin_vps_user_name is not defined
+        - admin_vps_password is not defined
+        - mssql_root_password is not defined
+        - allowed_ips | length != 3
+        - mssql_container_name is not defined
+        - mssql_data_volume is not defined
+        - mssql_databases | length != 8
+        - new_mssql_admin_user_name is not defined
+        - new_mssql_admin_password is not defined
+        - new_mssql_cmt_user_name is not defined
+        - new_mssql_cmt_password is not defined
+
+    # Step 2: Validate password strengths for various users
+    - name: 2. Validate admin VPS password strength
+      assert:
+        that:
+          - admin_vps_password | length >= 12
+          - admin_vps_password | regex_search('[A-Z]')
+          - admin_vps_password | regex_search('[a-z]')
+          - admin_vps_password | regex_search('[0-9]')
+    
+    - name: 3. Validate root MSSQL password strength
+      assert:
+        that:
+          - mssql_root_password | length >= 12
+          - mssql_root_password | regex_search('[A-Z]')
+          - mssql_root_password | regex_search('[a-z]')
+          - mssql_root_password | regex_search('[0-9]')
+
+    - name: 4. Validate MSSQL CMT user password strength
+      assert:
+        that:
+          - new_mssql_cmt_password | length >= 12
+          - new_mssql_cmt_password | regex_search('[A-Z]')
+          - new_mssql_cmt_password | regex_search('[a-z]')
+          - new_mssql_cmt_password | regex_search('[0-9]')
+
+    # Step 3: Validate MSSQL configuration (container, volume, databases, etc.)
+    - name: 5. Validate MSSQL database names
+      assert:
+        that:
+          - mssql_databases | map('regex_search', '^[a-zA-Z0-9_]+$') | list | length == mssql_databases | length
+        fail_msg: "Database names can only include alphanumeric characters and underscores."
+        success_msg: "All database names are valid."
+
+    - name: 6. Validate MSSQL port is numeric and within valid range
+      assert:
+        that:
+          - mssql_port | int >= 1024
+          - mssql_port | int <= 65535
+        fail_msg: "MSSQL port must be a valid number between 1024 and 65535."
+        success_msg: "MSSQL port is valid."
+    
+    # Step 4: Validate allowed IP addresses
+    - name: 7. Ensure exactly 3 allowed IPs are provided
+      fail:
+        msg: "Exactly 3 allowed IP addresses must be provided."
+      when:
+        - allowed_ips | length != 3
+    
+    # Step 8: Validate allowed IPs format
+    - name: 8. Validate allowed IPs format
+      assert:
+        that:
+          - allowed_ips | map('regex_search', '^(\d{1,3}\.){3}\d{1,3}$') | list | length == allowed_ips | length
+        fail_msg: "All allowed IPs must be valid IPv4 addresses."
+        success_msg: "All allowed IPs are valid."
