@@ -11,5 +11,6 @@
           - docker.io
           - fail2ban
           - aide
+          - firewalld
         state: present
         update_cache: yes

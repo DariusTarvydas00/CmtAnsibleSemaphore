@@ -19,9 +19,15 @@
           ( ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing.
       when:
         - allowed_ips | length != 3
+          
+    - name: 2. Ensure firewalld is running
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
 
     # Configure MSSQL firewall rules for allowed IPs
-    - name: 1. Add firewall rule for allowed IPs
+    - name: 3. Add firewall rule for allowed IPs
       command: >
         firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' accept" --permanent
       with_items: "{{ allowed_ips }}"
@@ -29,32 +35,32 @@
         - Reload firewalld
         
     # Configure SSH settings
-    - name: 2. Set SSH to use a non-standard port
+    - name: 4. Set SSH to use a non-standard port
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?Port'
         line: "Port {{ ssh_port }}"
 
-    - name: 3. Set maxauthtries to 3 for SSH
+    - name: 5. Set maxauthtries to 3 for SSH
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?MaxAuthTries'
         line: 'MaxAuthTries 3'
 
-    - name: 4. Limit SSH access to specific IPs
+    - name: 6. Limit SSH access to specific IPs
       lineinfile:
         path: /etc/hosts.allow
         line: "sshd: {{ item }}"
         create: yes
       with_items: "{{ allowed_ips }}"
 
-    - name: 5. Restart SSH service
+    - name: 7. Restart SSH service
       service:
         name: ssh
         state: restarted
         
     # Configure fail2ban for SSH and MSSQL
-    - name: 6. Configure fail2ban for SSH
+    - name: 8. Configure fail2ban for SSH
       copy:
         dest: /etc/fail2ban/jail.d/ssh.conf
         content: |
@@ -69,27 +75,27 @@
         - Restart Fail2Ban
 
     # Rate limiting and SYN flood protection using iptables
-    - name: 7. Rate limit SSH connections using iptables
+    - name: 9. Rate limit SSH connections using iptables
       command: >
         iptables -A INPUT -p tcp --dport {{ ssh_port }} -m state --state NEW -m recent --set
       ignore_errors: yes
 
-    - name: 8. Limit incoming MSSQL connections using iptables
+    - name: 10. Limit incoming MSSQL connections using iptables
       command: >
         iptables -A INPUT -p tcp --dport 1433 -m state --state NEW -m recent --set
       ignore_errors: yes
 
-    - name: 9. Configure SYN flood protection via iptables
+    - name: 11. Configure SYN flood protection via iptables
       command: >
         iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 5 -j ACCEPT
       ignore_errors: yes
 
     # Apply system hardening via AIDE (Advanced Intrusion Detection)
-    - name: 10. Initialize AIDE
+    - name: 12. Initialize AIDE
       command: aideinit
       ignore_errors: yes
 
-    - name: 11. Configure AIDE system configuration
+    - name: 13. Configure AIDE system configuration
       copy:
         src: /etc/aide/aide.conf
         dest: /etc/aide/aide.conf
@@ -98,7 +104,7 @@
         mode: 0644
         
     # Disable root login for SSH
-    - name: 12. Disable root login
+    - name: 14. Disable root login
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PermitRootLogin'
