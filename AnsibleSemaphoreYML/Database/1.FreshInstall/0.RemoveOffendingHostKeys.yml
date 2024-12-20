@@ -1,0 +1,31 @@
+---
+- name: Remove offending host key from known_hosts
+  hosts: localhost
+  become: true  # Ensure the task is run with appropriate privileges
+  vars:
+    remove_ip: "{{ lookup('env', 'REMOVE_IP') }}"  # Fetch the IP address from the environment variable
+
+  tasks:
+    - name: Ensure REMOVE_IP is defined
+      fail:
+        msg: "The REMOVE_IP environment variable is not defined. Please set it before running this playbook."
+      when: remove_ip is not defined or remove_ip == ''
+
+    - name: Remove the offending SSH key from known_hosts
+      command: >
+        ssh-keygen -f "/home/semaphore/.ssh/known_hosts" -R "{{ remove_ip }}"
+      become_user: semaphore  # Ensure the task is run as the semaphore user
+      ignore_errors: true  # Ignore any errors if the key is already removed
+
+    - name: Verify that the offending key was removed
+      command: "grep '{{ remove_ip }}' /home/semaphore/.ssh/known_hosts"
+      become_user: semaphore
+      register: grep_output
+      failed_when: grep_output.rc == 0
+      changed_when: false
+      ignore_errors: true  # Ignore errors if the key is no longer in known_hosts
+
+    - name: Display a message that the key was removed
+      debug:
+        msg: "The offending key for {{ remove_ip }} was successfully removed from known_hosts."
+      when: grep_output.rc != 0

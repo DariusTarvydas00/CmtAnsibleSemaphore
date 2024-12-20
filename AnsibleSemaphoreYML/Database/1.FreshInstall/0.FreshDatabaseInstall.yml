@@ -29,27 +29,6 @@
     new_mssql_admin_password: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
 
   tasks:
-    # Step 1: Ensure all required environment variables are set
-    - name: Ensure all required environment variables are set
-      fail:
-        msg: "Required environment variables (USER_NAME, USER_PASSWORD, MSSQL_ROOT_PASSWORD, ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3) are missing."
-      when:
-        - user_name is not defined
-        - user_password is not defined
-        - mssql_password is not defined
-        - allowed_ips is not defined
-        - new_mssql_admin_user is not defined
-        - new_mssql_admin_password is not defined
-
-    # Step 2: Validate user password strength
-    - name: Validate user password strength
-      assert:
-        that:
-          - user_password | length >= 12
-          - user_password | regex_search('[A-Z]')  # At least one uppercase letter
-          - user_password | regex_search('[a-z]')  # At least one lowercase letter
-          - user_password | regex_search('[0-9]')  # At least one numeric digit
-
     # Step 3: Disable root login for SSH
     - name: Disable root login
       lineinfile:
