@@ -1,31 +1,4 @@
   tasks:
-    # Step 3: Disable root login for SSH
-    - name: Disable root login
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?PermitRootLogin'
-        line: 'PermitRootLogin no'
-      notify:
-        - Restart SSH service
-
-#    # Step 5: Grant sudo access to the user with validation
-#    - name: Ensure sudoers.d directory exists and has proper permissions
-#      file:
-#        path: /etc/sudoers.d
-#        state: directory
-#        mode: '0755'
-#        owner: root
-#        group: root
-#
-#    - name: Grant sudo access to the user with validation
-#      copy:
-#        content: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL\n"
-#        dest: "/etc/sudoers.d/{{ user_name }}"
-#        mode: '0440'
-#        owner: root
-#        group: root
-#        validate: '/usr/sbin/visudo -cf %s'
-
     - name: Start and enable Docker service
       systemd:
         name: docker
