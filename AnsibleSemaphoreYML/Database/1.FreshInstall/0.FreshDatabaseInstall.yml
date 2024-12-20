@@ -1,33 +1,3 @@
----
-- name: Configure Server Security, Setup Users, MSSQL, and Firewall
-  hosts: all
-  become: true
-  vars:
-    # Fetch required environment variables
-    user_name: "{{ lookup('env', 'USER_NAME') }}"  # Fetch username from environment
-    user_password: "{{ lookup('env', 'USER_PASSWORD') }}"  # Fetch password from environment
-    mssql_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
-    allowed_ips:
-      - "{{ lookup('env', 'ALLOWED_IP_1') }}"
-      - "{{ lookup('env', 'ALLOWED_IP_2') }}"
-      - "{{ lookup('env', 'ALLOWED_IP_3') }}"
-    mssql_image_name: "mcr.microsoft.com/mssql/server:2022-latest"  # MSSQL Docker image
-    mssql_container_name: "mssql-server-container"
-    mssql_data_volume: "mssql-data"
-    mssql_port: 1433  # MSSQL port
-    mssql_databases:  # Databases to be created
-      - Cmt_Database
-      - Accounts
-      - Authentication
-      - CabalCash
-      - CabalGuild
-      - EventData
-      - Netcafebilling
-      - Server01
-    ssh_port: 2222  # Set non-standard SSH port
-    new_mssql_admin_user: "{{ lookup('env', 'NEW_MSSQL_ADMIN_USERNAME') }}"
-    new_mssql_admin_password: "{{ lookup('env', 'NEW_MSSQL_ADMIN_PASSWORD') }}"  # New MSSQL admin password
-
   tasks:
     # Step 3: Disable root login for SSH
     - name: Disable root login
@@ -72,17 +42,6 @@
         owner: root
         group: root
         validate: '/usr/sbin/visudo -cf %s'
-
-    # Step 6: Install necessary packages including Docker
-    - name: Install required packages
-      apt:
-        name:
-          - sudo
-          - docker.io
-          - fail2ban
-          - aide
-        state: present
-        update_cache: yes
 
     - name: Start and enable Docker service
       systemd:
