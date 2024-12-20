@@ -202,8 +202,8 @@
       lineinfile:
         path: /etc/hosts.allow
         line: "sshd: {{ item }}"
+        create: yes
       with_items: "{{ allowed_ips }}"
-      state: present
 
     - name: Restart SSH service
       service:
