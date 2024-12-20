@@ -30,4 +30,5 @@
         owner: root
         group: root
         validate: '/usr/sbin/visudo -cf %s'  # Ensures sudoers file is valid before applying
+        insertafter: EOF
       when: admin_vps_user_name is defined
