@@ -66,7 +66,19 @@
         -Q "ALTER LOGIN sa DISABLE"
       ignore_errors: yes
 
-
+#    # Configure MSSQL firewall rules for allowed IPs
+#    - name: 1. Add firewall rule for allowed IPs
+#      command: >
+#        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
+#      with_items: "{{ allowed_ips }}"
+#      notify:
+#        - Reload firewalld
+#
+#    - name: 2. Deny all other MSSQL access
+#      command: firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" service name="mssql" reject' --permanent
+#      notify:
+#        - Reload firewalld
+#          
 #    - name: Configure fail2ban for MSSQL
 #      copy:
 #        dest: /etc/fail2ban/jail.d/mssql.conf

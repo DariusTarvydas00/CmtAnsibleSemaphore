@@ -23,37 +23,32 @@
     # Configure MSSQL firewall rules for allowed IPs
     - name: 1. Add firewall rule for allowed IPs
       command: >
-        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' port='{{ mssql_port }}' accept" --permanent
+        firewall-cmd --zone=public --add-rich-rule="rule family='ipv4' source address='{{ item }}' port protocol='tcp' accept" --permanent
       with_items: "{{ allowed_ips }}"
-      notify:
-        - Reload firewalld
-
-    - name: 2. Deny all other MSSQL access
-      command: firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" service name="mssql" reject' --permanent
       notify:
         - Reload firewalld
         
     # Configure SSH settings
-    - name: 3. Set SSH to use a non-standard port
+    - name: 2. Set SSH to use a non-standard port
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?Port'
         line: "Port {{ ssh_port }}"
 
-    - name: 4. Set maxauthtries to 3 for SSH
+    - name: 3. Set maxauthtries to 3 for SSH
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?MaxAuthTries'
         line: 'MaxAuthTries 3'
 
-    - name: 5. Limit SSH access to specific IPs
+    - name: 4. Limit SSH access to specific IPs
       lineinfile:
         path: /etc/hosts.allow
         line: "sshd: {{ item }}"
         create: yes
       with_items: "{{ allowed_ips }}"
 
-    - name: Restart SSH service
+    - name: 5. Restart SSH service
       service:
         name: ssh
         state: restarted
