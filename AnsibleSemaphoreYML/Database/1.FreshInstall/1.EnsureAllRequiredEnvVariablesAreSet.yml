@@ -31,7 +31,7 @@
     new_mssql_cmt_password: "{{ lookup('env', 'MSSQL_CMT_PASSWORD') }}"  # New MSSQL CMT password
 
   tasks:
-    # Step 1: Ensure all required environment variables are set
+    # Ensure all required environment variables are set
     - name: 1. Ensure all required environment variables are set
       fail:
         msg: >-
@@ -52,7 +52,7 @@
         - new_mssql_cmt_user_name is not defined
         - new_mssql_cmt_password is not defined
 
-    # Step 2: Validate password strengths for various users
+    # Validate password strengths for various users
     - name: 2. Validate admin VPS password strength
       assert:
         that:
@@ -77,7 +77,7 @@
           - new_mssql_cmt_password | regex_search('[a-z]')
           - new_mssql_cmt_password | regex_search('[0-9]')
 
-    # Step 3: Validate MSSQL configuration (container, volume, databases, etc.)
+    # Validate MSSQL configuration (container, volume, databases, etc.)
     - name: 5. Validate MSSQL database names
       assert:
         that:
@@ -85,7 +85,7 @@
         fail_msg: "Database names can only include alphanumeric characters and underscores."
         success_msg: "All database names are valid."
 
-    - name: 6. Validate MSSQL port is numeric and within valid range
+    - name: 6.Validate MSSQL port is numeric and within valid range
       assert:
         that:
           - mssql_port | int >= 1024
@@ -93,14 +93,14 @@
         fail_msg: "MSSQL port must be a valid number between 1024 and 65535."
         success_msg: "MSSQL port is valid."
     
-    # Step 4: Validate allowed IP addresses
+    # Validate allowed IP addresses
     - name: 7. Ensure exactly 3 allowed IPs are provided
       fail:
         msg: "Exactly 3 allowed IP addresses must be provided."
       when:
         - allowed_ips | length != 3
     
-    # Step 8: Validate allowed IPs format
+    # Validate allowed IPs format
     - name: 8. Validate allowed IPs format
       assert:
         that:

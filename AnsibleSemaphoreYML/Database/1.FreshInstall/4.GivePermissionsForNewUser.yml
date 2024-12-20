@@ -1,0 +1,26 @@
+---
+- name: Create new admin user
+  hosts: all
+  become: true
+  vars:
+    # Fetch required environment variables
+    admin_vps_user_name: "{{ lookup('env', 'ADMIN_VPS_USER_NAME') }}"  # Admin User Name
+    admin_vps_password: "{{ lookup('env', 'ADMIN_VPS_USER_PASSWORD') }}"  # Admin Password
+  tasks:
+    # Grant sudo access to the user with validation
+    - name: 1. Ensure sudoers.d directory exists and has proper permissions
+      file:
+        path: /etc/sudoers.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: 2. Grant sudo access to the user with validation
+      copy:
+        content: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL\n"
+        dest: "/etc/sudoers.d/{{ user_name }}"
+        mode: '0440'
+        owner: root
+        group: root
+        validate: '/usr/sbin/visudo -cf %s'

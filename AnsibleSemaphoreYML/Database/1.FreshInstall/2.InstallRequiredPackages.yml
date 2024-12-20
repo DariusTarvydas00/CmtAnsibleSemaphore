@@ -3,8 +3,8 @@
   hosts: all
   become: true
   tasks:
-    # Step 6: Install necessary packages including Docker
-    - name: Install required packages
+    # Install necessary packages including Docker
+    - name: 1.Install required packages
       apt:
         name:
           - sudo

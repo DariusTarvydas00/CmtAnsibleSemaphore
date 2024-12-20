@@ -3,31 +3,31 @@
   hosts: all
   become: true
   tasks:
-    # Step 1: Update apt cache
-    - name: Update apt cache
+    # Update apt cache
+    - name: 1.Update apt cache
       ansible.builtin.apt:
         update_cache: yes
 
-    # Step 2: Perform a distribution upgrade
-    - name: Perform distribution upgrade
+    # Perform a distribution upgrade
+    - name: 2.Perform distribution upgrade
       ansible.builtin.apt:
         upgrade: dist
         autoremove: yes
         autoclean: yes
 
-    # Step 3: Clean up unused packages and dependencies
-    - name: Clean up unused packages and dependencies
+    # Clean up unused packages and dependencies
+    - name: 3.Clean up unused packages and dependencies
       ansible.builtin.apt:
         state: absent
         autoremove: yes
         autoclean: yes
 
-    # Step 4: Verify system status after updates
-    - name: Verify system is updated and clean
+    # Verify system status after updates
+    - name: 4.Verify system is updated and clean
       command: "apt list --upgradable"
       register: updates_status
       changed_when: false
 
-    - name: Display remaining updates (if any)
+    - name: 5.Display remaining updates (if any)
       debug:
         var: updates_status.stdout_lines

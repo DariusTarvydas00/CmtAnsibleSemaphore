@@ -1,0 +1,19 @@
+---
+- name: Create new admin user
+  hosts: all
+  become: true
+  tasks:
+    # Disable root login for SSH
+    - name: 1. Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify:
+        - Restart SSH service
+          
+  handlers:
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
