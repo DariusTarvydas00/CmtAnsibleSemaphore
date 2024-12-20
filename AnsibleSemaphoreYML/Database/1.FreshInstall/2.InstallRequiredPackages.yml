@@ -1,0 +1,15 @@
+---
+- name: System Update, Upgrade, and Clean Up with Validation
+  hosts: all
+  become: true
+  tasks:
+    # Step 6: Install necessary packages including Docker
+    - name: Install required packages
+      apt:
+        name:
+        - sudo
+        - docker.io
+        - fail2ban
+        - aide
+      state: present
+      update_cache: yes

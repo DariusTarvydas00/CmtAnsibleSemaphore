@@ -73,17 +73,6 @@
         group: root
         validate: '/usr/sbin/visudo -cf %s'
 
-    # Step 6: Install necessary packages including Docker
-    - name: Install required packages
-      apt:
-        name:
-          - sudo
-          - docker.io
-          - fail2ban
-          - aide
-        state: present
-        update_cache: yes
-
     - name: Start and enable Docker service
       systemd:
         name: docker
