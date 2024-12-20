@@ -4,8 +4,6 @@
   become: true
   vars:
     # Fetch required environment variables
-    admin_vps_user_name: "{{ lookup('env', 'ADMIN_VPS_USER_NAME') }}"  # Admin User Name
-    admin_vps_password: "{{ lookup('env', 'ADMIN_VPS_USER_PASSWORD') }}"  # Admin Password
     mssql_root_password: "{{ lookup('env', 'MSSQL_ROOT_PASSWORD') }}"  # SA password stored in environment
     allowed_ips:
       - "{{ lookup('env', 'ALLOWED_IP_1') }}"
@@ -36,12 +34,10 @@
       fail:
         msg: >-
           Required environment variables 
-          (ADMIN_VPS_USER_NAME, ADMIN_VPS_USER_PASSWORD, MSSQL_ROOT_PASSWORD, 
+          (MSSQL_ROOT_PASSWORD, 
           ALLOWED_IP_1, ALLOWED_IP_2, ALLOWED_IP_3, MSSQL_CONTAINER_NAME, MSSQL_DATA_VOLUME, MSSQL_ADMIN_USERNAME, MSSQL_ADMIN_PASSWORD, 
           MSSQL_CMT_USERNAME, MSSQL_CMT_PASSWORD) are missing.
       when:
-        - admin_vps_user_name is not defined
-        - admin_vps_password is not defined
         - mssql_root_password is not defined
         - allowed_ips | length != 3
         - mssql_container_name is not defined
@@ -51,15 +47,6 @@
         - new_mssql_admin_password is not defined
         - new_mssql_cmt_user_name is not defined
         - new_mssql_cmt_password is not defined
-
-    # Validate password strengths for various users
-    - name: 2. Validate admin VPS password strength
-      assert:
-        that:
-          - admin_vps_password | length >= 12
-          - admin_vps_password | regex_search('[A-Z]')
-          - admin_vps_password | regex_search('[a-z]')
-          - admin_vps_password | regex_search('[0-9]')
     
     - name: 3. Validate root MSSQL password strength
       assert:
